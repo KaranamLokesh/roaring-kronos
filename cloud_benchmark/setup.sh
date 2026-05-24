@@ -25,8 +25,12 @@ if [ ! -d "kronos_src" ]; then
     git clone "$KRONOS" kronos_src
 fi
 
-# 3. Python deps — use python3 -m pip for portability (Lambda base image)
+# 3. Python deps — install pip first if needed (Lambda base image is bare)
 echo "[3/5] Installing Python deps…"
+if ! python3 -m pip --version >/dev/null 2>&1; then
+    echo "  pip not found — installing python3-pip via apt…"
+    sudo apt update -qq && sudo apt install -y -qq python3-pip
+fi
 PIP="python3 -m pip"
 $PIP install --quiet --upgrade pip
 $PIP install --quiet torch transformers pyroaring pandas numpy huggingface_hub \
