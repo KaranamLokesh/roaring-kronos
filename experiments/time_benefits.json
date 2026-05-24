@@ -1,0 +1,50 @@
+{
+  "dataloader": {
+    "vanilla_sec": 0.035872583044692874,
+    "roaring_sec": 0.024245500098913908,
+    "speedup": 1.4795563258478552,
+    "n_batches": 200
+  },
+  "end_to_end_finetune_macbook": {
+    "vanilla_total_sec": 282.40000000000003,
+    "roaring_total_sec": 276.79999999999995,
+    "vanilla_per_epoch_sec": [
+      59.7,
+      55.0,
+      56.2,
+      56.4,
+      55.1
+    ],
+    "roaring_per_epoch_sec": [
+      56.3,
+      54.8,
+      55.0,
+      54.8,
+      55.9
+    ],
+    "speedup": 1.0202312138728327,
+    "note": "GPU-bound on MPS; data loading <5% of total step"
+  },
+  "rare_event_lookup": {
+    "corpus_size": 17352,
+    "n_rare_tokens": 223,
+    "linear_scan_ms": 0.7103597079403698,
+    "roaring_union_ms": 0.062320249970071025,
+    "speedup": 11.398537526430276
+  },
+  "projected_kronos_scale": {
+    "corpus": 12000000000,
+    "gpus": 8,
+    "epochs": 30,
+    "vanilla_hours": 190.73333333333332,
+    "roaring_hours": 175.27812981182623,
+    "saved_hours": 15.455203521507087,
+    "saved_dollars": 247.2832563441134,
+    "assumptions": {
+      "gpu_step_ms": 250,
+      "data_fraction_vanilla": 0.25,
+      "data_fraction_roaring": 0.16896957258909237,
+      "gpu_cost_per_hr_usd": 2.0
+    }
+  }
+}
