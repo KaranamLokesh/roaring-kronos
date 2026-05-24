@@ -33,8 +33,13 @@ if ! python3 -m pip --version >/dev/null 2>&1; then
 fi
 PIP="python3 -m pip"
 $PIP install --quiet --upgrade pip
-$PIP install --quiet torch transformers pyroaring pandas numpy huggingface_hub \
+# Install CUDA-enabled torch first (PyPI default is CPU-only)
+$PIP install --quiet torch --index-url https://download.pytorch.org/whl/cu121
+$PIP install --quiet transformers pyroaring pandas numpy huggingface_hub \
     tqdm matplotlib scipy einops safetensors yfinance
+
+# Verify CUDA is reachable
+python3 -c "import torch; assert torch.cuda.is_available(), 'CUDA NOT AVAILABLE — torch installed without GPU support'; print(f'  CUDA ready: {torch.cuda.get_device_name(0)}')"
 
 # 4. Verify data is present (committed in the repo)
 if [ ! -f "data/btc_1h_full_tokens.npy" ]; then
