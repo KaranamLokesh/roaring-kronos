@@ -25,10 +25,11 @@ if [ ! -d "kronos_src" ]; then
     git clone "$KRONOS" kronos_src
 fi
 
-# 3. Python deps
+# 3. Python deps — use python3 -m pip for portability (Lambda base image)
 echo "[3/5] Installing Python deps…"
-pip install --quiet --upgrade pip
-pip install --quiet torch transformers pyroaring pandas numpy huggingface_hub \
+PIP="python3 -m pip"
+$PIP install --quiet --upgrade pip
+$PIP install --quiet torch transformers pyroaring pandas numpy huggingface_hub \
     tqdm matplotlib scipy einops safetensors yfinance
 
 # 4. Verify data is present (committed in the repo)
