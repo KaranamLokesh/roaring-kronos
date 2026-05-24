@@ -33,13 +33,34 @@ if ! python3 -m pip --version >/dev/null 2>&1; then
 fi
 PIP="python3 -m pip"
 $PIP install --quiet --upgrade pip
-# Install CUDA-enabled torch first (PyPI default is CPU-only)
-$PIP install --quiet torch --index-url https://download.pytorch.org/whl/cu121
+
+# Detect CUDA driver version to pick the right torch wheel
+if command -v nvidia-smi >/dev/null 2>&1; then
+    CUDA_MAJOR=$(nvidia-smi | grep -oP 'CUDA Version: \K[0-9]+' | head -1)
+    if [ "$CUDA_MAJOR" = "12" ]; then
+        TORCH_INDEX="https://download.pytorch.org/whl/cu121"
+    elif [ "$CUDA_MAJOR" = "11" ]; then
+        TORCH_INDEX="https://download.pytorch.org/whl/cu118"
+    else
+        echo "  Warning: unknown CUDA version $CUDA_MAJOR — defaulting to cu121"
+        TORCH_INDEX="https://download.pytorch.org/whl/cu121"
+    fi
+    echo "  Detected CUDA $CUDA_MAJOR → using $TORCH_INDEX"
+else
+    echo "  No nvidia-smi found — installing CPU torch"
+    TORCH_INDEX="https://download.pytorch.org/whl/cpu"
+fi
+
+# Force reinstall in case CPU torch was previously installed
+$PIP uninstall -y torch 2>/dev/null || true
+$PIP install --quiet torch --index-url "$TORCH_INDEX"
 $PIP install --quiet transformers pyroaring pandas numpy huggingface_hub \
     tqdm matplotlib scipy einops safetensors yfinance
 
-# Verify CUDA is reachable
-python3 -c "import torch; assert torch.cuda.is_available(), 'CUDA NOT AVAILABLE — torch installed without GPU support'; print(f'  CUDA ready: {torch.cuda.get_device_name(0)}')"
+# Verify CUDA is reachable (only if a GPU was detected)
+if command -v nvidia-smi >/dev/null 2>&1; then
+    python3 -c "import torch; assert torch.cuda.is_available(), 'CUDA NOT AVAILABLE — torch installed without GPU support'; print(f'  CUDA ready: {torch.cuda.get_device_name(0)}')"
+fi
 
 # 4. Verify data is present (committed in the repo)
 if [ ! -f "data/btc_1h_full_tokens.npy" ]; then
