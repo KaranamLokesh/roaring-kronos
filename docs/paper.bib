@@ -1,17 +1,115 @@
-@inproceedings{kronos2026,
+% Bibliography for Roaring-Kronos ICAIF paper
+% Last updated: 2026-05-24 after lit review
+
+%--- Financial Foundation Models ---
+
+@inproceedings{kronos2025,
   author    = {Shi, Yu and others},
   title     = {{Kronos}: A Foundation Model for the Language of Financial Markets},
   booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence},
   year      = {2026},
-  note      = {Code: \url{https://github.com/shiyu-coder/Kronos}}
+  note      = {arXiv:2508.02739}
 }
 
-@article{bsq2024,
-  author    = {Zhao, Yue and Xiong, Yuanjun and Kr{\"a}henb{\"u}hl, Philipp},
-  title     = {Image and Video Tokenization with Binary Spherical Quantization},
-  journal   = {arXiv preprint arXiv:2406.07548},
+@inproceedings{chronos2024,
+  author    = {Ansari, Abdul Fatir and Stella, Lorenzo and others},
+  title     = {{Chronos}: Learning the Language of Time Series},
+  booktitle = {arXiv preprint arXiv:2403.07815},
   year      = {2024}
 }
+
+@inproceedings{moirai2024,
+  author    = {Woo, Gerald and Liu, Chenghao and Kumar, Akshat and others},
+  title     = {Unified Training of Universal Time Series Forecasting Transformers ({MOIRAI})},
+  booktitle = {Proceedings of the International Conference on Machine Learning},
+  year      = {2024}
+}
+
+@inproceedings{timesfm2024,
+  author    = {Das, Abhimanyu and Kong, Weihao and Sen, Rajat and Zhou, Yichen},
+  title     = {A Decoder-Only Foundation Model for Time-Series Forecasting},
+  booktitle = {Proceedings of the International Conference on Machine Learning},
+  year      = {2024},
+  note      = {arXiv:2310.10688}
+}
+
+@inproceedings{lagllama2023,
+  author    = {Rasul, Kashif and Ashok, Arjun and others},
+  title     = {{Lag-Llama}: Towards Foundation Models for Probabilistic Time Series Forecasting},
+  booktitle = {arXiv preprint arXiv:2310.08278},
+  year      = {2023}
+}
+
+@article{bloomberggpt2023,
+  author    = {Wu, Shijie and Irsoy, Ozan and others},
+  title     = {{BloombergGPT}: A Large Language Model for Finance},
+  journal   = {arXiv preprint arXiv:2303.17564},
+  year      = {2023}
+}
+
+@article{fingpt2023,
+  author    = {Yang, Hongyang and Liu, Xiao-Yang and Wang, Christina Dan},
+  title     = {{FinGPT}: Open-Source Financial Large Language Models},
+  journal   = {arXiv preprint arXiv:2306.06031},
+  year      = {2023}
+}
+
+%--- Discrete Tokenization (BSQ Family) ---
+
+@inproceedings{bsq2024,
+  author    = {Zhao, Yue and Xiong, Yuanjun and Kr{\"a}henb{\"u}hl, Philipp},
+  title     = {Image and Video Tokenization with Binary Spherical Quantization},
+  booktitle = {Proceedings of the International Conference on Learning Representations},
+  year      = {2025},
+  note      = {arXiv:2406.07548}
+}
+
+@inproceedings{fsq2024,
+  author    = {Mentzer, Fabian and Minnen, David and Agustsson, Eirikur and Tschannen, Michael},
+  title     = {Finite Scalar Quantization: {VQ-VAE} Made Simple},
+  booktitle = {Proceedings of the International Conference on Learning Representations},
+  year      = {2024},
+  note      = {arXiv:2309.15505}
+}
+
+@inproceedings{lfq2024,
+  author    = {Yu, Lijun and Lezama, Jos{\'e} and others},
+  title     = {Language Model Beats Diffusion --- Tokenizer Is Key to Visual Generation ({MagViT-v2})},
+  booktitle = {Proceedings of the International Conference on Learning Representations},
+  year      = {2024},
+  note      = {arXiv:2310.05737}
+}
+
+@inproceedings{vqvae2017,
+  author    = {van den Oord, A{\"a}ron and Vinyals, Oriol and Kavukcuoglu, Koray},
+  title     = {Neural Discrete Representation Learning},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2017}
+}
+
+@inproceedings{rvq_audio2024,
+  author    = {Kumar, Rithesh and Seetharaman, Prem and others},
+  title     = {High-Fidelity Audio Compression with Improved {RVQGAN}},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2024},
+  note      = {arXiv:2306.06546}
+}
+
+@article{shrinks_codebook2026,
+  author    = {Anonymous},
+  title     = {Early Quantization Shrinks Codebook: A Simple Fix for Diversity-Preserving Tokenization},
+  journal   = {arXiv preprint arXiv:2603.17052},
+  year      = {2026}
+}
+
+@article{discrete_tokenization_survey2025,
+  author    = {Anonymous},
+  title     = {Discrete Tokenization for Multimodal {LLMs}: A Comprehensive Survey},
+  journal   = {arXiv preprint arXiv:2507.22920},
+  year      = {2025}
+}
+
+%--- Compressed Bitmaps / Data Systems ---
 
 @article{roaring2016,
   author    = {Lemire, Daniel and Ssi-Yan-Kai, Gregory and Kaser, Owen},
@@ -23,83 +121,119 @@
   year      = {2016}
 }
 
-@article{vaswani2017,
-  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and
-               Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan~N. and
-               Kaiser, {\L}ukasz and Polosukhin, Illia},
-  title     = {Attention Is All You Need},
-  journal   = {Advances in Neural Information Processing Systems},
-  year      = {2017}
-}
-
-@techreport{gpt2,
-  author    = {Radford, Alec and Wu, Jeffrey and Child, Rewon and
-               Luan, David and Amodei, Dario and Sutskever, Ilya},
-  title     = {Language Models are Unsupervised Multitask Learners},
-  institution = {OpenAI},
-  year      = {2019}
-}
-
 @inproceedings{druid,
-  author    = {Yang, Fangjin and Tschetter, Eric and L{\'e}aut{\'e}, Xavier and
-               Ray, Nelson and Merlino, Gian and Ganguli, Deep},
-  title     = {{Druid}: A Real-time Analytical Data Store},
-  booktitle = {Proceedings of the 2014 ACM SIGMOD International Conference on
-               Management of Data},
+  author    = {Yang, Fangjin and Tschetter, Eric and others},
+  title     = {{Druid}: A Real-Time Analytical Data Store},
+  booktitle = {SIGMOD},
   year      = {2014}
 }
 
 @misc{lucene,
   author    = {{Apache Software Foundation}},
-  title     = {Apache {Lucene} core},
+  title     = {Apache {Lucene}},
   year      = {2024},
   howpublished = {\url{https://lucene.apache.org/}}
 }
 
-@article{chronos2024,
-  author    = {Ansari, Abdul~Fatir and Stella, Lorenzo and others},
-  title     = {{Chronos}: Learning the Language of Time Series},
-  journal   = {arXiv preprint arXiv:2403.07815},
+@misc{spark,
+  author    = {{Apache Software Foundation}},
+  title     = {Apache {Spark}},
+  year      = {2024},
+  howpublished = {\url{https://spark.apache.org/}}
+}
+
+@misc{pinot,
+  author    = {{Apache Software Foundation}},
+  title     = {Apache {Pinot}},
+  year      = {2024},
+  howpublished = {\url{https://pinot.apache.org/}}
+}
+
+%--- Deduplication & Corpus Indexing in ML ---
+
+@inproceedings{lee2022dedup,
+  author    = {Lee, Katherine and Ippolito, Daphne and others},
+  title     = {Deduplicating Training Data Makes Language Models Better},
+  booktitle = {Proceedings of the Association for Computational Linguistics},
+  year      = {2022}
+}
+
+@article{lshbloom2024,
+  author    = {Zelenfreund, Arham and others},
+  title     = {{LSHBloom}: Memory-efficient, Extreme-scale Document Deduplication},
+  journal   = {arXiv preprint arXiv:2411.04257},
   year      = {2024}
 }
 
-@article{moirai2024,
-  author    = {Woo, Gerald and Liu, Chenghao and Kumar, Akshat and others},
-  title     = {Unified Training of Universal Time Series Forecasting Transformers
-               ({MOIRAI})},
-  journal   = {arXiv preprint arXiv:2402.02592},
+@article{dolma2024,
+  author    = {Soldaini, Luca and Kinney, Rodney and others},
+  title     = {{Dolma}: An Open Corpus of Three Trillion Tokens for Language Model Pretraining Research},
+  journal   = {arXiv preprint arXiv:2402.00159},
   year      = {2024}
 }
 
-@article{timesfm2024,
-  author    = {Das, Abhimanyu and Kong, Weihao and Sen, Rajat and Zhou, Yichen},
-  title     = {A Decoder-Only Foundation Model for Time-Series Forecasting
-               ({TimesFM})},
-  journal   = {International Conference on Machine Learning},
-  year      = {2024}
+%--- Stratified Sampling / Curriculum Learning ---
+
+@inproceedings{sohem2017,
+  author    = {Li, Zhaowei and Peng, Cheng and others},
+  title     = {{S-OHEM}: Stratified Online Hard Example Mining for Object Detection},
+  booktitle = {arXiv preprint arXiv:1705.02233},
+  year      = {2017}
 }
 
 @inproceedings{bengio2009curriculum,
-  author    = {Bengio, Yoshua and Louradour, J{\'e}r{\^o}me and Collobert, Ronan and
-               Weston, Jason},
+  author    = {Bengio, Yoshua and Louradour, J{\'e}r{\^o}me and Collobert, Ronan and Weston, Jason},
   title     = {Curriculum Learning},
-  booktitle = {Proceedings of the 26th Annual International Conference on
-               Machine Learning},
+  booktitle = {Proceedings of the International Conference on Machine Learning},
   year      = {2009}
 }
 
-@book{kahn1997stratified,
-  author    = {Kahn, Henry and Marshall, Andy~W.},
-  title     = {Methods of Reducing Sample Size in {Monte Carlo} Computations},
-  publisher = {The RAND Corporation},
-  year      = {1953}
+@article{curriculum_llm2025,
+  author    = {Anonymous},
+  title     = {Beyond Random Sampling: Efficient Language Model Pretraining via Curriculum Learning},
+  journal   = {arXiv preprint arXiv:2506.11300},
+  year      = {2025}
 }
 
-@book{quantamental,
+@inproceedings{tail_risk2023,
+  author    = {Anonymous},
+  title     = {Importance Sampling for Minimization of Tail Risks: A Tutorial},
+  booktitle = {Proceedings of the Winter Simulation Conference},
+  year      = {2023},
+  note      = {arXiv:2307.04676}
+}
+
+%--- Data Loading / System Bottlenecks ---
+
+@article{megascale2024,
+  author    = {Jiang, Ziheng and Lin, Haibin and others},
+  title     = {{MegaScale}: Scaling Large Language Model Training to More Than 10{,}000 {GPU}s},
+  journal   = {arXiv preprint arXiv:2402.15627},
+  year      = {2024}
+}
+
+@article{computational_bottlenecks2024,
+  author    = {Anonymous},
+  title     = {Computational Bottlenecks of Training Small-scale Large Language Models},
+  journal   = {arXiv preprint arXiv:2410.19456},
+  year      = {2024}
+}
+
+%--- Quantitative Finance Reference ---
+
+@book{grinold1999active,
   author    = {Grinold, Richard~C. and Kahn, Ronald~N.},
-  title     = {Active Portfolio Management: A Quantitative Approach for Producing
-               Superior Returns and Controlling Risk},
+  title     = {Active Portfolio Management: A Quantitative Approach for Producing Superior Returns and Controlling Risk},
   publisher = {McGraw-Hill},
   edition   = {2nd},
   year      = {1999}
+}
+
+%--- Foundational ML ---
+
+@article{vaswani2017,
+  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and others},
+  title     = {Attention Is All You Need},
+  journal   = {Advances in Neural Information Processing Systems},
+  year      = {2017}
 }
