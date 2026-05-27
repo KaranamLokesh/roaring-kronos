@@ -79,6 +79,14 @@ mkdir -p "$STAGING"
 # Copy only the files arXiv needs (NOT the build artifacts)
 cp paper.tex paper.bib "$STAGING/"
 
+# Copy figure files (referenced via \includegraphics{figures/...})
+if [ -d figures ]; then
+    mkdir -p "$STAGING/figures"
+    cp figures/*.png "$STAGING/figures/" 2>/dev/null || true
+    N_FIGS=$(ls "$STAGING/figures/" 2>/dev/null | wc -l | tr -d ' ')
+    echo "  ✓ Included $N_FIGS figure(s) from figures/"
+fi
+
 # Include the .bbl too — arXiv may not run BibTeX itself for older
 # submissions, and including the compiled .bbl avoids that risk.
 if [ -f paper.bbl ]; then
@@ -88,8 +96,7 @@ fi
 
 # Build tarball
 cd "$STAGING"
-tar -czf "$SUBMIT_DIR/arxiv_submission.tar.gz" *.tex *.bib *.bbl 2>/dev/null || \
-tar -czf "$SUBMIT_DIR/arxiv_submission.tar.gz" *.tex *.bib
+tar -czf "$SUBMIT_DIR/arxiv_submission.tar.gz" * 2>/dev/null
 
 cd "$DOCS_DIR"
 rm -rf "$STAGING"

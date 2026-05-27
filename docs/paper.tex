@@ -418,6 +418,23 @@ cover 44.5\% of all bars; the top~49 cover~80\%. The mean
 $s_1$~run-length is~2.4~bars with a maximum of~80~bars
 (17.6\% of runs are $\geq 3$~bars), providing the contiguity structure
 that Roaring's run-length encoding compresses well.
+Figure~\ref{fig:tokens} visualises the full distribution.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig1_token_distribution.png}
+  \caption{BSQ token analysis on 17{,}352 BTC-USD hourly bars.
+  \emph{Top row:} $s_1$ (coarse) and $s_2$ (fine) token frequency
+  distributions. \emph{Middle:} full $s_1\!\cdot\!s_2$ token frequency
+  sorted by rank; the top~49 tokens cover~80\% of all bars (red
+  dashed line). \emph{Bottom-left:} $s_1$ run-length distribution
+  (consecutive bars sharing the same coarse mood) showing the
+  long-tail clustering structure. \emph{Bottom-right:} number of
+  distinct~$s_2$ tokens observed per~$s_1$ context;
+  all~163 active~$s_1$ values use at most~8 of the~1024 possible fine
+  tokens.}
+  \label{fig:tokens}
+\end{figure*}
 
 %------------------------------------------------------------------------------
 \subsection{Posting list compression}\label{sec:compression}
@@ -502,6 +519,24 @@ Roaring increases rare-token coverage by~27\% (relative), entropy
 by~0.063~bits, and slightly reduces top-token
 dominance. These improvements are achieved without modifying any
 model code; the only change is the choice of training-time sampler.
+Figure~\ref{fig:dataloader} visualises the per-window rare-token
+hit distribution and the token frequency rank curve under each
+sampler.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig2_dataloader_benchmark.png}
+  \caption{Vanilla uniform vs.\ Roaring stratified
+  ($f=0.30$) dataloader.
+  \emph{Left:} histogram of the number of rare~(shock) tokens per
+  window; Roaring's distribution has a heavier tail.
+  \emph{Middle:} token frequency rank curves on a log-log scale; the
+  two samplers behave identically at the head (common tokens) but
+  Roaring has more weight at the tail (rare tokens). \emph{Right:}
+  summary metrics. Roaring increases token-distribution entropy
+  by~0.063 bits and rare-token coverage by~27\% (relative).}
+  \label{fig:dataloader}
+\end{figure*}
 
 %------------------------------------------------------------------------------
 \subsection{Hierarchical co-occurrence
@@ -595,6 +630,24 @@ End-to-end speedup &  $1.00\times$ & $0.965\times$ & \\
 \end{tabular}
 \end{table}
 
+Figure~\ref{fig:timing} visualises the per-phase breakdown as
+stacked and side-by-side bars; the forward + backward bars dominate
+the step in both samplers.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig3_a10_step_breakdown.png}
+  \caption{Per-step time breakdown on NVIDIA~A10 with
+  Kronos-base (B=32, T=512).
+  \emph{Left:} stacked bars showing each phase's contribution to total
+  step time; forward and backward together are~$>95\%$ of every step.
+  \emph{Right:} side-by-side per-phase comparison. The
+  data-loading and H2D-transfer phases (the only ones Roaring affects)
+  are barely visible on this scale. End-to-end speedup is
+  $0.965\times$, within run-to-run noise.}
+  \label{fig:timing}
+\end{figure*}
+
 \textbf{Honest interpretation.} The end-to-end ratio of~0.965$\times$
 falls within run-to-run noise of the forward and backward times,
 which themselves vary by several percent across 100~batches. We do
@@ -684,7 +737,24 @@ The April~2026 result is the cleanest evidence supporting the
 hypothesis that shock-token overweighting helps in volatile
 regime-change periods. The May~2026 result is the counterfactual: in
 calm trending months, the shock-trained model is excessively
-conservative.
+conservative. Figure~\ref{fig:backtest} shows the cumulative-return
+trajectories and the per-month RankIC heatmap that makes this
+regime asymmetry visible.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig4_backtest_comparison.png}
+  \caption{Three-way backtest comparison (zero-shot,
+  vanilla-finetuned, Roaring-finetuned) on the BTC-USD~1h test split.
+  \emph{Top:} cumulative return of the $\sigma_{\text{last}}$ signal
+  with 0.15\% round-trip cost, against buy-and-hold benchmark
+  (black dashed). \emph{Middle:} RankIC and Sharpe by signal type.
+  \emph{Bottom:} monthly RankIC heatmap. Green cells indicate
+  predictive months, red cells anti-predictive. Roaring-FT's
+  April~2026 cell~($+0.195$) is the highest-IC cell of any
+  model-month combination in the experiment.}
+  \label{fig:backtest}
+\end{figure*}
 
 %==============================================================================
 \section{Discussion}\label{sec:discussion}
