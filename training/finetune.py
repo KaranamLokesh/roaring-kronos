@@ -46,7 +46,7 @@ LOG_EVERY        = 20       # print loss every N batches
 SAVE_DIR         = os.path.join(os.path.dirname(__file__), '..', 'outputs', 'models')
 
 
-def make_dataset(sampler: str, split: str, seed: int):
+def make_dataset(sampler: str, split: str, seed: int, shock_frac: float = SHOCK_FRAC):
     """Build train or val dataset for the given sampler type."""
     # Validation uses vanilla sampling regardless of sampler type
     # so both models see the same val distribution
@@ -59,7 +59,7 @@ def make_dataset(sampler: str, split: str, seed: int):
             steps_per_epoch=steps * BATCH_SIZE,
             seed=effective_seed,
             rare_threshold=RARE_THRESHOLD,
-            shock_frac=SHOCK_FRAC,
+            shock_frac=shock_frac,
         )
     else:
         return VanillaDataset(
@@ -127,10 +127,18 @@ def run_epoch(model, tokenizer, loader, optimizer, scheduler, device,
     return total_loss / n, total_s1 / n, total_s2 / n
 
 
-def main(sampler: str):
+def main(sampler: str, seed: int = 42, shock_frac: float = SHOCK_FRAC,
+         epochs: int = EPOCHS, output_dir: str | None = None):
     print(f"\n{'='*60}")
-    print(f"Fine-tuning Kronos-small  |  sampler={sampler}")
+    print(f"Fine-tuning Kronos-small  |  sampler={sampler}  seed={seed}  "
+          f"shock_frac={shock_frac}  epochs={epochs}")
     print(f"{'='*60}\n")
+
+    # Seed everything for reproducibility
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
     # ── Device ────────────────────────────────────────────────────────────────
     if torch.cuda.is_available():
@@ -157,8 +165,8 @@ def main(sampler: str):
 
     # ── Dataloaders ────────────────────────────────────────────────────────
     print("Building datasets…")
-    train_ds = make_dataset(sampler, 'train', seed=42)
-    val_ds   = make_dataset(sampler, 'val',   seed=42)
+    train_ds = make_dataset(sampler, 'train', seed=seed, shock_frac=shock_frac)
+    val_ds   = make_dataset(sampler, 'val',   seed=seed, shock_frac=shock_frac)
     print()
 
     train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
@@ -169,7 +177,7 @@ def main(sampler: str):
         model.parameters(), lr=LR,
         betas=(BETA1, BETA2), weight_decay=WEIGHT_DECAY
     )
-    total_steps = STEPS_PER_EPOCH * EPOCHS
+    total_steps = STEPS_PER_EPOCH * epochs
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, max_lr=LR,
         total_steps=total_steps,
@@ -177,16 +185,17 @@ def main(sampler: str):
     )
 
     # ── Save dir ──────────────────────────────────────────────────────────
-    save_path = os.path.join(SAVE_DIR, f'{sampler}_finetuned', 'best_model')
+    run_name = output_dir or f'{sampler}_finetuned'
+    save_path = os.path.join(SAVE_DIR, run_name, 'best_model')
     os.makedirs(save_path, exist_ok=True)
 
     # ── Training loop ─────────────────────────────────────────────────────
     best_val_loss = float('inf')
     history = []
 
-    for epoch in range(1, EPOCHS + 1):
+    for epoch in range(1, epochs + 1):
         t0 = time.perf_counter()
-        print(f"── Epoch {epoch}/{EPOCHS} ──────────────────────────────────")
+        print(f"── Epoch {epoch}/{epochs} ──────────────────────────────────")
 
         train_loss, train_s1, train_s2 = run_epoch(
             model, tokenizer, train_loader, optimizer, scheduler,
@@ -222,14 +231,33 @@ def main(sampler: str):
     print(f"{'='*60}\n")
 
     import json
-    with open(os.path.join(SAVE_DIR, f'{sampler}_finetuned', 'history.json'), 'w') as f:
-        json.dump(history, f, indent=2)
+    with open(os.path.join(SAVE_DIR, run_name, 'history.json'), 'w') as f:
+        json.dump({
+            'config': {
+                'sampler': sampler, 'seed': seed, 'shock_frac': shock_frac,
+                'epochs': epochs, 'batch_size': BATCH_SIZE, 'seq_len': SEQ_LEN,
+                'lr': LR, 'steps_per_epoch': STEPS_PER_EPOCH,
+            },
+            'history': history,
+            'best_val_loss': best_val_loss,
+        }, f, indent=2)
     print("Training history saved.")
+    return best_val_loss, history
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Random seed for reproducibility')
+    parser.add_argument('--shock-frac', type=float, default=SHOCK_FRAC,
+                        help='Fraction of windows anchored at shock bars (Roaring only)')
+    parser.add_argument('--epochs', type=int, default=EPOCHS,
+                        help='Number of training epochs')
+    parser.add_argument('--output-dir', type=str, default=None,
+                        help='Output directory name under outputs/models/. '
+                             'Defaults to "<sampler>_finetuned"')
     parser.add_argument('--sampler', choices=['vanilla', 'roaring'], default='vanilla',
                         help='vanilla = uniform sampling | roaring = stratified shock sampling')
     args = parser.parse_args()
-    main(args.sampler)
+    main(args.sampler, seed=args.seed, shock_frac=args.shock_frac,
+         epochs=args.epochs, output_dir=args.output_dir)
