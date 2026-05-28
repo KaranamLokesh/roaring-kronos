@@ -817,10 +817,6 @@ completely~\citep{curriculum_llm2025}; we do not measure this.
 \item \textbf{Single regime test period.}
 Dec~2025--May~2026 is a bear-with-recovery regime. A bull-market
 test period would likely shift the signal/asymmetry trade-off.
-\item \textbf{Frozen tokenizer.} We apply Roaring during stage-2
-fine-tuning only. Applying the same techniques during stage-1
-tokenizer training~\citep{shrinks_codebook2026} is left as future
-work.
 \item \textbf{Single hardware tier.} A10~(24~GB) timing;
 H100~/~B200 with~$3$--$5\times$ higher arithmetic throughput may
 shift the data-loading fraction upward, but we do not measure
@@ -829,6 +825,50 @@ this.
 reported; a sweep over $f \in \{0.15, 0.30, 0.45, 0.60\}$ would
 likely identify a regime-dependent optimum.
 \end{itemize}
+
+%==============================================================================
+\section{Future Work}\label{sec:future-work}
+%==============================================================================
+
+The most natural extension of this work is to apply Roaring-informed
+sampling during \emph{stage-1} tokenizer training, not only stage-2
+predictor fine-tuning as we do here. At stage-1, the BSQ encoder maps
+raw OHLCVA bars to a continuous embedding which is then
+quantized~\citep{bsq2024}; the loss is a reconstruction loss plus an
+entropy regularizer that encourages codebook
+utilization. \citet{shrinks_codebook2026} argue that early-training
+collapse of the codebook is a primary driver of poor downstream
+diversity, and propose a \emph{deferred quantization} schedule to fix
+it. A Roaring-based alternative could instead reweight the training
+distribution itself: at each step, the encoder sees a stratified
+batch in which both common chop bars and rare shock bars are
+adequately represented. The vocabulary diagnostic we introduce
+in~\S\ref{sec:cooc-results} provides a direct measurement target:
+the goal would be to raise the vocabulary utilization
+from~0.04\% (the released Kronos tokenizer on financial data)
+toward FSQ's~\mbox{$\sim$100\%} on image data~\citep{fsq2024}, while
+preserving the hierarchical conditional sparsity that makes the
+factored prediction tractable. This is a substantial undertaking
+that would essentially be a separate paper, including new datasets,
+distributed training, and direct comparison against the Kronos
+release. We see it as the principal direction for follow-up.
+
+A second direction is to apply the same diagnostic infrastructure
+across modalities. BSQ originates in image and video
+tokenization~\citep{bsq2024}; LFQ~\citep{lfq2024} and FSQ
+\citep{fsq2024} are widely used for vision and audio. Reporting
+hierarchical conditional sparsity on those corpora would test
+whether the 32\%~deterministic-fine-token finding is financial-data-
+specific or a general property of how
+small-vocab~$\times$~small-vocab BSQ tokenizers learn to factor
+their output. Either result would be informative.
+
+A third direction is downstream system integration with the
+deduplication pipelines of LSHBloom~\citep{lshbloom2024} and
+Dolma~\citep{dolma2024}. Our work assumes the corpus is already
+deduplicated; in practice large-scale financial corpora are not, and
+the same Roaring posting-list infrastructure could support
+deduplication-aware stratified sampling in a single pass.
 
 %==============================================================================
 \section{Conclusion}

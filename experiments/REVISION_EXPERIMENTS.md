@@ -86,6 +86,57 @@ python experiments/multi_seed_runner.py
 
 ---
 
+---
+
+## 5. Epoch sweep (≈3 hours)
+
+Addresses the "Short fine-tune (5 epochs)" limitation. Trains both
+samplers for 5/10/20/30 epochs and reports val-loss + backtest
+metrics at each length.
+
+```bash
+python experiments/epoch_sweep.py
+```
+
+**Outputs:**
+- `experiments/results/epoch_sweep.json`
+- `experiments/epoch_sweep.png`
+
+**Paper impact:** New convergence-curve figure. Determines if Roaring's
+slight aggregate disadvantage at 5 epochs closes, persists, or flips
+with longer training.
+
+---
+
+## 6. Walk-forward backtest (~16 hours, OPTIONAL)
+
+Addresses the "Single regime test period" limitation by sliding a
+12-month-train / 3-month-test window across an extended BTC history
+(2020-2026 via Binance free API).
+
+```bash
+python experiments/walk_forward_backtest.py --windows 6 --start-year 2020
+```
+
+**Outputs:**
+- `data/btc_extended_1h.csv` (one-time ~50 MB download)
+- `experiments/results/walk_forward.json`
+- `experiments/walk_forward_backtest.png`
+
+**Paper impact:** Tests whether the April-2026 win was a regime-specific
+fluke or a reproducible pattern across multiple bull/bear/sideways
+regimes. The heaviest experiment but the most defensible result.
+
+---
+
+## H100 hardware benchmark (~$1.50 cloud)
+
+Addresses the "Single hardware tier (A10 only)" limitation. See the
+runbook at `cloud_benchmark/h100_benchmark.md`. Same script as A10;
+just runs on H100 cloud instance.
+
+---
+
 ## How to use the results in the paper
 
 After running, the JSONs contain everything you need to update specific tables and figures:
@@ -97,7 +148,10 @@ After running, the JSONs contain everything you need to update specific tables a
 | §4.6 implication paragraph | `cooc_cache_inference.json` provides measured speedup |
 | §4.5 + new shock_frac figure | `shock_frac_sweep.json` adds sensitivity panel |
 | Table 4 (headline backtest) | `multi_seed_summary.json` adds ± std |
-| §6 Limitations | Cross out 4 of 7 limitations |
+| New convergence figure | `epoch_sweep.json` |
+| New walk-forward figure | `walk_forward.json` |
+| §4.7 update (multi-hw) | H100 benchmark JSON |
+| §6 Limitations | Cross out 6 of 7 — frozen tokenizer becomes §7 Future Work |
 
 ## Cost estimate
 
@@ -107,6 +161,30 @@ After running, the JSONs contain everything you need to update specific tables a
 | cooc-cache inference | 15 min | $0.32 |
 | shock_frac sweep | 2.5 h | $3.23 |
 | Multi-seed runner | 3.5 h | $4.52 |
-| **Total** | **6.75 h** | **$8.72** |
+| Epoch sweep | 3 h | $3.87 |
+| H100 benchmark | 30 min @ $2.49 | $1.25 |
+| Walk-forward (optional) | 16 h | $20.64 |
+| **Total (core 6)** | **~10 h** | **~$14** |
+| **+ walk-forward** | **~26 h** | **~$34** |
 
-On MacBook MPS the wall-clock is similar but cost is zero (overnight run).
+On MacBook MPS the wall-clock for the core six (minus H100, which
+needs CUDA) is similar but cost is zero. Walk-forward at 16 hours is
+best done on cloud — the wall-clock penalty for MacBook is significant
+because the 6 windows each require fresh fine-tunes.
+
+## Limitations status after all six
+
+| # | Limitation | Status |
+|---|------------|--------|
+| 1 | Single asset (BTC) | ✅ multi_asset_diagnostic.py |
+| 2 | Single seed | ✅ multi_seed_runner.py |
+| 3 | Short fine-tune (5 epochs) | ✅ epoch_sweep.py |
+| 4 | Single regime test period | ✅ walk_forward_backtest.py |
+| 5 | Frozen tokenizer | 🔄 Moved to §7 Future Work in paper |
+| 6 | Single hardware tier | ✅ h100_benchmark.md (runbook) |
+| 7 | Unswept shock fraction | ✅ shock_frac_sweep.py |
+
+Limitation #5 ("Frozen tokenizer") is fundamentally a separate paper
+(would require re-pretraining a BSQ tokenizer on financial data with
+Roaring-augmented stage-1 sampling). The current paper now frames it
+as the principal direction for follow-up work in §7.

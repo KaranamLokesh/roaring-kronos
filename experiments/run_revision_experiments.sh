@@ -44,8 +44,19 @@ python experiments/shock_frac_sweep.py
 echo ""
 
 # 4. Multi-seed runner — 6 fine-tunes + 6 backtests (≈3.5 hours)
-echo "════════ [4/4] Multi-seed runner (≈3.5 hours) ════════"
+echo "════════ [4/6] Multi-seed runner (≈3.5 hours) ════════"
 python experiments/multi_seed_runner.py
+echo ""
+
+# 5. Epoch sweep — 8 fine-tunes + 8 backtests (≈3 hours)
+echo "════════ [5/6] Epoch sweep (≈3 hours) ════════"
+python experiments/epoch_sweep.py
+echo ""
+
+# 6. Walk-forward backtest — opt-in (long, requires Binance download)
+echo "════════ [6/6] Walk-forward backtest (~16 hours, OPTIONAL) ════════"
+echo "Skipping by default. To run, execute:"
+echo "    python experiments/walk_forward_backtest.py --windows 6 --start-year 2020"
 echo ""
 
 echo "════════════════════════════════════════════════════════════════"
