@@ -6,14 +6,22 @@ bibliography.
 
 ## Compile
 
-You need a TeX distribution with `acmart`. On macOS:
+The paper uses the official TMLR LaTeX template
+(`tmlr.sty` from https://github.com/JmlrOrg/tmlr-style-file). The
+required style files are bundled here in `docs/`:
+
+- `tmlr.sty` — TMLR style file (custom)
+- `tmlr.bst` — TMLR BibTeX style (custom)
+- `fancyhdr.sty` — header/footer (required by tmlr.sty)
+- `math_commands.tex` — optional math macros
+
+On macOS:
 
 ```bash
-brew install --cask mactex-no-gui   # or `mactex` for the full GUI
-# Or, smaller:
 brew install --cask basictex
 sudo tlmgr update --self
-sudo tlmgr install acmart booktabs subcaption amsmath listings xcolor
+sudo tlmgr install booktabs amsmath listings xcolor hyperref \
+                   natbib eso-pic fancyhdr
 ```
 
 Then compile:
@@ -21,18 +29,34 @@ Then compile:
 ```bash
 cd docs
 pdflatex paper.tex
-bibtex paper
+bibtex   paper
 pdflatex paper.tex
 pdflatex paper.tex
 ```
 
 Output: `paper.pdf`.
 
-## Online compile
+## Online compile (recommended)
 
-Easier: upload `paper.tex` + `paper.bib` to [Overleaf](https://overleaf.com).
-The `acmart` template is built in — Overleaf will detect the document
-class automatically.
+Easier: upload all files in `docs/` (including `tmlr.sty`,
+`tmlr.bst`, `fancyhdr.sty`, `paper.tex`, `paper.bib`, and the
+`figures/` directory) to [Overleaf](https://overleaf.com). Overleaf
+will autoselect `pdflatex`.
+
+## Three build modes
+
+The paper has three operating modes, switched by changing one line in
+`paper.tex`:
+
+```latex
+\usepackage{tmlr}              % default — DOUBLE-BLIND for TMLR submission
+\usepackage[preprint]{tmlr}    % de-anonymized for arXiv preprint
+\usepackage[accepted]{tmlr}    % camera-ready (after acceptance)
+```
+
+The default mode auto-anonymizes the author block ("Anonymous
+authors / Paper under double-blind review"). The other two modes
+show the author block as written.
 
 ## Figures referenced
 

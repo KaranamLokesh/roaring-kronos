@@ -86,19 +86,36 @@ The arXiv accepts the LaTeX source (preferred) or a single PDF.
 
 **Option A — LaTeX source (preferred, allows arXiv to rebuild the PDF correctly):**
 
-Upload a single tar.gz containing:
+Upload the tarball produced by `docs/submission/prep_arxiv.sh`. It
+contains:
 ```
-paper.tex
-paper.bib
-ACM-Reference-Format.bst   (if not already in your TeX install)
-acmart.cls                  (only if you've customised it; otherwise arXiv has it)
+paper.tex            ← uses \usepackage{tmlr}, default = anonymous
+paper.bib            ← bibliography
+tmlr.sty             ← TMLR LaTeX style file (custom, must be bundled)
+tmlr.bst             ← TMLR BibTeX style (custom, must be bundled)
+fancyhdr.sty         ← required by tmlr.sty
+math_commands.tex    ← optional math macros from the TMLR template
+figures/fig1..4.png  ← four embedded result figures
 ```
 
-Use the build script in this directory: `bash docs/submission/prep_arxiv.sh`
+**Important for arXiv (de-anonymized preprint):**
+
+Before building the arXiv version, swap the line in `paper.tex`:
+```latex
+\usepackage{tmlr}                  % anonymous (TMLR submission)
+% Change to:
+\usepackage[preprint]{tmlr}        % de-anonymized (arXiv preprint)
+```
+Then also fill in the real author block:
+```latex
+\author{\name Lokesh Karanam \email sunnylokesh3@gmail.com \\
+        \addr Independent Researcher}
+```
 
 **Option B — Single PDF:**
 
-If LaTeX compilation on arXiv fails, fall back to uploading `paper.pdf` directly.
+If LaTeX compilation on arXiv fails, fall back to uploading `paper.pdf`
+directly (build it locally or in Overleaf first).
 
 ---
 

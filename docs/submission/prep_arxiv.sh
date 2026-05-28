@@ -79,6 +79,15 @@ mkdir -p "$STAGING"
 # Copy only the files arXiv needs (NOT the build artifacts)
 cp paper.tex paper.bib "$STAGING/"
 
+# Copy TMLR style files (tmlr.sty, tmlr.bst, fancyhdr.sty are required;
+# math_commands.tex is optional but harmless)
+for f in tmlr.sty tmlr.bst fancyhdr.sty math_commands.tex; do
+    if [ -f "$f" ]; then
+        cp "$f" "$STAGING/"
+    fi
+done
+echo "  ✓ Included TMLR style files (tmlr.sty, tmlr.bst, fancyhdr.sty)"
+
 # Copy figure files (referenced via \includegraphics{figures/...})
 if [ -d figures ]; then
     mkdir -p "$STAGING/figures"

@@ -1,19 +1,27 @@
 %%
-%% ICAIF Submission — Roaring Bitmaps for Kronos
-%% Template: ACM SIGCONF (acmart)
-%% Rewritten: 2026-05-24, after research-dossier lit review
+%% TMLR submission — Roaring-Bitmap augmentation of Kronos
 %%
-%% Compile with: pdflatex paper.tex && bibtex paper && pdflatex paper.tex && pdflatex paper.tex
+%% Build (anonymous, for OpenReview submission):
+%%   pdflatex paper && bibtex paper && pdflatex paper && pdflatex paper
 %%
-\documentclass[sigconf,nonacm]{acmart}
+%% For arXiv preprint (de-anonymized):
+%%   replace \usepackage{tmlr} with \usepackage[preprint]{tmlr}
+%%
+\documentclass[10pt]{article}
+\usepackage{tmlr}
+% For arXiv preprint, swap the above line for:
+%   \usepackage[preprint]{tmlr}
+% For camera-ready (after acceptance):
+%   \usepackage[accepted]{tmlr}
 
 \usepackage{booktabs}
 \usepackage{graphicx}
-\usepackage{subcaption}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{url}
 
 \lstset{
   basicstyle=\ttfamily\footnotesize,
@@ -24,66 +32,57 @@
   language=Python,
 }
 
-\setcopyright{none}
-\acmConference[ICAIF '26]{ACM International Conference on AI in Finance}{November 2026}{New York, NY, USA}
+\title{Measuring and Exploiting Token Sparsity in Financial
+Foundation Models: A Roaring-Bitmap Augmentation of Kronos}
+
+% Author block is automatically suppressed by tmlr.sty under double-blind
+% review. For preprint/accepted modes, fill in the author info below.
+\author{\name Anonymous \email anonymous@example.com \\
+        \addr Anonymous Institution}
+
+\def\month{05}
+\def\year{2026}
+\def\openreview{\url{https://openreview.net/forum?id=XXXXXXXX}}
 
 \begin{document}
 
-\title{Measuring and Exploiting Token Sparsity in Financial Foundation
-Models: A Roaring-Bitmap Augmentation of Kronos}
-
-\author{Lokesh Karanam}
-\affiliation{%
-  \institution{Independent}
-  \city{}
-  \country{}
-}
-\email{sunnylokesh3@gmail.com}
-
-\renewcommand{\shortauthors}{Karanam}
+\maketitle
 
 %==============================================================================
 \begin{abstract}
-Financial foundation models such as
-Kronos~\cite{kronos2025} adopt Binary Spherical
-Quantization~(BSQ)~\cite{bsq2024} to convert continuous OHLCVA
-candlestick bars into discrete tokens drawn from a vocabulary of
-size~$2^{K}$, treating market prediction as language modeling on a
-learned alphabet. While the BSQ design literature focuses on codebook
-utilization on \emph{image} and \emph{video} reconstruction
-\cite{fsq2024,lfq2024,shrinks_codebook2026}, the structure of the
-\emph{financial} corpus produced by such tokenizers has not been
-empirically characterized. We report the first such measurement.
-On 17{,}352 BTC-USD hourly bars over two years, the trained
-Kronos~BSQ tokenizer~uses only~417 of $1{,}048{,}576$ possible tokens
-(0.04\%); the top~49 tokens cover~80\% of all bars; and the mean
-$s_1$~run-length is~2.4~bars with a maximum of 80~bars (a multi-day
-regime). The corpus is exactly the regime-clustered, sparse integer
-set for which Roaring Bitmaps~\cite{roaring2016} --- the standard data
+Financial foundation models such as Kronos
+\citep{kronos2025} adopt Binary Spherical Quantization~(BSQ)
+\citep{bsq2024} to convert continuous OHLCVA candlestick bars into
+discrete tokens drawn from a vocabulary of size~$2^{K}$, treating
+market prediction as language modeling on a learned alphabet. While
+the BSQ design literature focuses on codebook utilization on image and
+video reconstruction
+\citep{fsq2024, lfq2024, shrinks_codebook2026}, the structure of the
+financial corpus produced by such tokenizers has not been empirically
+characterized. We report the first such measurement. On
+17{,}352~BTC-USD hourly bars over two years, the trained
+Kronos~BSQ tokenizer uses only~417 of the~$1{,}048{,}576$ possible
+tokens (0.04\%); the top~49 tokens cover~80\% of all bars; and the
+mean coarse-token run-length is~2.4 bars with a maximum of 80~bars.
+The corpus is exactly the regime-clustered, sparse integer set for
+which Roaring Bitmaps~\citep{roaring2016} --- the standard data
 structure for compressed integer indexes in production search and
 analytics systems --- were designed.
-
-We contribute three results. \emph{(i)}~A token-level stratified
-shock-bar dataloader, built atop Roaring posting lists, increases
-per-batch rare-token coverage by~27\% with zero measurable training
-overhead on an NVIDIA~A10. \emph{(ii)}~A novel
-hierarchical co-occurrence diagnostic for BSQ tokenizers reveals that
-52~of~163 active coarse tokens are paired with a deterministic fine
-token --- the BSQ hierarchy's conditional sparsity is far tighter than
-any prior measurement on a non-vision corpus suggests. \emph{(iii)}~In
-a fine-tune backtest matching Kronos's published evaluation protocol,
-our stratified sampler achieves the best single-month RankIC of any
-variant (April~2026, +0.195) and reduces maximum drawdown by~2.7
-percentage points versus uniform sampling, with no aggregate
-signal-quality penalty. All code, data, and bitmaps are released under
-MIT license.
+We contribute three results.
+\emph{(i)}~A token-level stratified shock-bar dataloader, built atop
+Roaring posting lists, increases per-batch rare-token coverage
+by~27\% with zero measurable training overhead on an
+NVIDIA~A10. \emph{(ii)}~A novel hierarchical co-occurrence diagnostic
+for BSQ tokenizers reveals that~52 of~163 active coarse tokens are
+paired with a deterministic fine token --- the BSQ hierarchy's
+conditional sparsity is far tighter than any prior measurement on a
+non-vision corpus suggests. \emph{(iii)}~In a fine-tune backtest
+matching Kronos's published evaluation protocol, our stratified
+sampler achieves the best single-month RankIC of any variant
+(April~2026, $+0.195$) and reduces maximum drawdown by~2.7~percentage
+points versus uniform sampling, with no aggregate signal-quality
+penalty.
 \end{abstract}
-
-\keywords{financial foundation models, time-series tokenization,
-binary spherical quantization, Roaring Bitmaps, stratified sampling,
-codebook utilization, Kronos}
-
-\maketitle
 
 %==============================================================================
 \section{Introduction}
@@ -91,84 +90,87 @@ codebook utilization, Kronos}
 
 Discrete tokenization is the load-bearing design choice in modern
 foundation models for non-language modalities. For audio
-codecs~\cite{rvq_audio2024}, vision generators~\cite{lfq2024}, and
-recently financial markets~\cite{kronos2025}, replacing continuous
-representations with a finite vocabulary unlocks the
-language-modeling toolchain: autoregressive prediction, top-$p$ and
-temperature sampling, and free probabilistic forecasts via Monte~Carlo
+codecs~\citep{rvq_audio2024}, vision generators~\citep{lfq2024}, and
+recently financial markets~\citep{kronos2025}, replacing continuous
+representations with a finite vocabulary unlocks the language-modeling
+toolchain: autoregressive prediction, top-$p$ and temperature
+sampling, and free probabilistic forecasts via Monte~Carlo
 rollout. The success of this transfer depends crucially on the
 \emph{structure} of the resulting tokenized corpus.
 
 Two phenomena have been well studied in the vision and audio
 tokenization literature. \textbf{Codebook collapse}~--- where most
 codes are never assigned --- is the central concern of vector
-quantization \cite{vqvae2017}, and three recent codebook-free
-alternatives (FSQ~\cite{fsq2024}, LFQ~\cite{lfq2024},
-BSQ~\cite{bsq2024}) attempt to solve it by design. \textbf{Codebook
-diagnostics}~--- moving beyond aggregate cross-entropy to inspect
-per-token usage --- is an active area: a recent call to action argues
-that ``reconstruction-centric evaluation hides downstream diversity
-problems'' and proposes a \emph{shrinkage diagnostic
-suite}~\cite{shrinks_codebook2026}. To date, both phenomena have been
-studied almost exclusively on image and video data.
+quantization~\citep{vqvae2017}, and three recent codebook-free
+alternatives (FSQ \citealp{fsq2024}, LFQ \citealp{lfq2024}, and
+BSQ \citealp{bsq2024}) attempt to solve it by
+design. \textbf{Codebook diagnostics}~--- moving beyond aggregate
+cross-entropy to inspect per-token usage --- is an active area: a
+recent call to action~\citep{shrinks_codebook2026} argues that
+``reconstruction-centric evaluation hides downstream diversity
+problems'' and proposes a \emph{shrinkage diagnostic suite}. To
+date, both phenomena have been studied almost exclusively on image
+and video data.
 
 This paper studies them on \emph{financial} data, where the structure
 turns out to differ in ways that motivate new infrastructure.
 
-\textbf{Observation~1 (extreme vocabulary sparsity).} On 17{,}352
-hourly~BTC-USD bars spanning May~2024--May~2026, the released Kronos
-BSQ tokenizer (\texttt{NeoQuasar/Kronos-Tokenizer-base},
-$K=20$~bits, $s_1=s_2=10$) produces only~417 distinct tokens out of
-$2^{20}=1{,}048{,}576$~possible --- a vocabulary utilization
+\textbf{Observation 1 (extreme vocabulary sparsity).}
+On~17{,}352 hourly BTC-USD bars spanning May~2024--May~2026, the
+released Kronos~BSQ tokenizer~(\texttt{NeoQuasar/Kronos-Tokenizer-base},
+$K=20$~bits, $s_1=s_2=10$) produces only~417 distinct tokens out
+of~$2^{20}=1{,}048{,}576$~possible --- a vocabulary utilization
 of~0.04\%. The top~49 tokens cover~80\% of all bars.
 
-\textbf{Observation~2 (strong regime clustering).} Token occurrences
-are temporally autocorrelated. The mean $s_1$~run-length is~2.4 bars
-with a maximum of~80 bars; markets persist in the same coarse mood for
-multi-day stretches.
+\textbf{Observation 2 (strong regime clustering).}
+Token occurrences are temporally autocorrelated. The mean
+$s_1$~run-length is~2.4~bars with a maximum of~80~bars; markets
+persist in the same coarse mood for multi-day stretches.
 
-\textbf{Observation~3 (tight hierarchical structure).} The BSQ
-hierarchical formulation predicts~$p(s_2 \mid s_1)$ on a factored
-basis. Empirically, this conditional is extraordinarily sharp:
-52~of~163 active~$s_1$ values are paired with exactly one~$s_2$ value
-in the entire corpus.
+\textbf{Observation 3 (tight hierarchical structure).}
+The BSQ hierarchical formulation predicts~$p(s_2 \mid s_1)$ on a
+factored basis. Empirically, this conditional is extraordinarily
+sharp: 52~of~163 active~$s_1$ values are paired with exactly
+one~$s_2$ value in the entire corpus.
 
-These three observations together describe the integer-set
-structure for which Roaring~Bitmaps~\cite{roaring2016} were
+These three observations together describe the integer-set structure
+for which Roaring~Bitmaps~\citep{roaring2016} were
 designed. Roaring is the de facto compressed bitmap in production
-data systems --- Lucene~\cite{lucene}, Druid~\cite{druid},
-Spark~\cite{spark}, Pinot~\cite{pinot}, ClickHouse --- but is rarely
-applied to ML training pipelines. We exploit this match.
+data systems --- including Lucene, Druid, Spark, and
+Pinot~\citep{druid} --- but is rarely applied to ML training
+pipelines. We exploit this match.
 
-\textbf{Contributions:}
+\textbf{Contributions.}
 \begin{enumerate}
 \item A \textbf{Roaring posting-list infrastructure} over BSQ tokens
-(\S\ref{sec:posting-lists}) achieving~1.86$\times$ compression versus
-raw \texttt{uint32} position lists and enabling 11.4$\times$ faster
+(\S\ref{sec:posting-lists}) achieving~$1.86\times$ compression versus
+raw \texttt{uint32} position lists and enabling~$11.4\times$ faster
 rare-event lookup that scales sub-linearly to the full~12B-record
 Kronos corpus.
 \item A \textbf{token-level stratified shock-bar
-dataloader} (\S\ref{sec:dataloader}) that overweights rare-token
+dataloader}~(\S\ref{sec:dataloader}) that overweights rare-token
 windows with zero measurable GPU-time overhead, increasing per-batch
 rare-token coverage by~27\% and reducing maximum drawdown
 by~2.7~percentage points in a fine-tune backtest.
-\item A \textbf{hierarchical co-occurrence diagnostic}
-(\S\ref{sec:diagnostic}) for BSQ tokenizers, directly answering the
-``need better diagnostic suites'' call of~\cite{shrinks_codebook2026}.
-We report the first measurement of conditional sparsity in a financial
-BSQ tokenizer.
+\item A \textbf{hierarchical co-occurrence
+diagnostic}~(\S\ref{sec:diagnostic}) for BSQ tokenizers, directly
+answering the ``need better diagnostic suites'' call
+of~\citet{shrinks_codebook2026}. We report the first measurement of
+conditional sparsity in a financial BSQ tokenizer.
 \end{enumerate}
 
 We do not claim a wall-clock training speedup. A direct measurement
-on an NVIDIA~A10 (\S\ref{sec:timing}) finds that data loading is~0.1\%
-of step time at typical fine-tune configuration, and the end-to-end
-speedup is~0.97$\times$~--- within run-to-run noise. The contribution
-of Roaring at this scale is that it makes training \emph{better at
-zero cost}, not that it makes training faster. Conditions under which
-the data-path speedup translates to wall-clock savings (extreme
-multi-node training~\cite{megascale2024}; Flash-Attention-accelerated
-forward/backward; small-model regimes~\cite{computational_bottlenecks2024})
-are discussed in~\S\ref{sec:discussion} but not measured here.
+on an NVIDIA~A10~(\S\ref{sec:timing}) finds that data loading
+is~0.1\% of step time at typical fine-tune configuration, and the
+end-to-end speedup is~$0.97\times$ --- within run-to-run
+noise. The contribution of Roaring at this scale is that it makes
+training \emph{better at zero cost}, not that it makes training
+faster. Conditions under which the data-path speedup would translate
+to wall-clock savings (extreme multi-node
+training~\citep{megascale2024}; Flash-Attention-accelerated
+forward/backward; small-model
+regimes~\citep{computational_bottlenecks2024}) are discussed
+in~\S\ref{sec:discussion} but not measured here.
 
 %==============================================================================
 \section{Background and Related Work}\label{sec:related}
@@ -179,95 +181,92 @@ We position the work across three lines of prior research.
 \subsection{Foundation Models for Financial Time Series}
 
 The dominant approach has been to apply Transformer-style sequence
-models to continuous market data. \textbf{Kronos}~\cite{kronos2025} is
-the proximate context for this paper: a decoder-only Transformer
-trained on 12 billion candlesticks from~45 global exchanges,
-distinguished from prior work by its use of hierarchical BSQ
-tokenization. Kronos reports a 93\% RankIC improvement over the
-leading time-series foundation model and a 9\% MAE reduction in
-volatility forecasting~\cite{kronos2025}.
+models~\citep{vaswani2017} to continuous market
+data. \textbf{Kronos}~\citep{kronos2025} is the proximate context for
+this paper: a decoder-only Transformer trained on~12~billion
+candlesticks from~45 global exchanges, distinguished from prior work
+by its use of hierarchical BSQ tokenization. Kronos reports a~93\%
+RankIC improvement over the leading time-series foundation model and
+a~9\% MAE reduction in volatility forecasting~\citep{kronos2025}.
 
 Adjacent foundation models for time series include
-\textbf{Chronos}~\cite{chronos2024} (Amazon; uniform-bin quantile
-tokenization with 4096 bins), \textbf{Moirai}~\cite{moirai2024}
-(Salesforce; encoder-only with any-variate attention; no tokenization
-of values),
-\textbf{TimesFM}~\cite{timesfm2024} (Google; decoder-only with
-continuous patch embeddings), and
-\textbf{Lag-Llama}~\cite{lagllama2023} (open-source probabilistic
+\textbf{Chronos}~\citep{chronos2024} (Amazon; uniform-bin quantile
+tokenization with~4096 bins), \textbf{Moirai}~\citep{moirai2024}
+(Salesforce; encoder-only with any-variate attention; no quantization
+of values), \textbf{TimesFM}~\citep{timesfm2024} (Google; decoder-only
+with continuous patch embeddings), and
+\textbf{Lag-Llama}~\citep{lagllama2023} (open-source probabilistic
 forecasting with explicit lag covariates). Each uses a different
 tokenization strategy. The text-only finance
-LLMs~\cite{bloomberggpt2023,fingpt2023}~--- BloombergGPT and
+LLMs~\citep{bloomberggpt2023, fingpt2023}~--- BloombergGPT and
 FinGPT~--- are a separate modality and not directly comparable to
 candlestick-based forecasters.
 
 Of these, only Kronos uses a BSQ-style implicit-codebook
 tokenizer. Our diagnostic and stratification techniques are
 mechanistically tied to that choice; they apply directly only to
-BSQ/LFQ/FSQ-style tokenizers, not to the continuous
-patch~\cite{timesfm2024} or quantile-binning~\cite{chronos2024}
-approaches.
+BSQ/LFQ/FSQ-style tokenizers, not to the continuous patch
+\citep{timesfm2024} or quantile-binning~\citep{chronos2024} approaches.
 
 \subsection{Discrete Tokenization: BSQ and Its Lineage}
 
-VQ-VAE~\cite{vqvae2017} introduced explicit-codebook quantization for
-neural discrete representation; it suffers chronic codebook collapse
-where most codebook entries remain unused. Three recent codebook-free
-alternatives address this:
-\textbf{FSQ}~\cite{fsq2024} uses element-wise rounding to small
-finite sets, achieving \mbox{$\sim$100\%} utilization by design.
-\textbf{LFQ}~\cite{lfq2024}, introduced in MagViT-v2, eliminates the
+VQ-VAE~\citep{vqvae2017} introduced explicit-codebook quantization
+for neural discrete representation; it suffers chronic codebook
+collapse where most codebook entries remain unused. Three recent
+codebook-free alternatives address this:
+\textbf{FSQ}~\citep{fsq2024} uses element-wise rounding to small
+finite sets, achieving \mbox{$\sim$100\%} utilization by design;
+\textbf{LFQ}~\citep{lfq2024}, introduced in MagViT-v2, eliminates the
 codebook entirely via element-wise sign() on projected features,
-supporting vocabularies up to~$2^{18}$.
-\textbf{BSQ}~\cite{bsq2024}, used by Kronos, extends LFQ with
+supporting vocabularies up to~$2^{18}$; and
+\textbf{BSQ}~\citep{bsq2024}, used by Kronos, extends LFQ with
 unit-sphere normalization for bounded quantization error and a
 hierarchical~$s_1 \times s_2$ factoring that makes entropy
 regularization tractable at large~$K$.
 
 The diagnostic side of this literature is younger but growing.
-\cite{shrinks_codebook2026} introduces a ``shrinkage diagnostic
+\citet{shrinks_codebook2026} introduces a ``shrinkage diagnostic
 suite'' for discrete tokenizers and proposes \emph{deferred
 quantization} as a design fix.
-\cite{discrete_tokenization_survey2025} surveys the field. These works
-focus exclusively on image and video tokenizers. Our hierarchical
-co-occurrence diagnostic~(\S\ref{sec:diagnostic}) is the first such
-measurement applied to a financial BSQ tokenizer.
+\citet{discrete_tokenization_survey2025} survey the
+field. These works focus exclusively on image and video tokenizers.
+Our hierarchical co-occurrence
+diagnostic~(\S\ref{sec:diagnostic}) is the first such measurement
+applied to a financial BSQ tokenizer.
 
 \subsection{Stratified and Curriculum Sampling}
 
 Overweighting rare or hard examples during training has a long
-history. \textbf{Curriculum
-learning}~\cite{bengio2009curriculum} and \textbf{importance
-sampling for rare events}~\cite{tail_risk2023} provide the theoretical
-backbone. \textbf{S-OHEM}~\cite{sohem2017} applied stratified hard
-example mining at the object-proposal level for detection. Most
-recently, \cite{curriculum_llm2025} demonstrates that
-curriculum-ordered batches yield 18--45\% training-step reduction
-during LLM pretraining.
+history. Curriculum learning~\citep{bengio2009curriculum} and
+importance sampling for rare events~\citep{tail_risk2023} provide the
+theoretical backbone. \textbf{S-OHEM}~\citep{sohem2017} applied
+stratified hard-example mining at the object-proposal level for
+detection. More recently, \citet{curriculum_llm2025} demonstrates
+that curriculum-ordered batches yield~18--45\% training-step
+reduction during LLM pretraining.
 
 These works operate at the example level (entire documents, images,
 or region proposals). We are unaware of prior work that performs
-stratified sampling at the \emph{token-occurrence} level
-within sequences, using compressed-bitmap posting lists for
-constant-time rare-event selection.
+stratified sampling at the \emph{token-occurrence} level within
+sequences, using compressed-bitmap posting lists for constant-time
+rare-event selection.
 
 \subsection{Compressed Bitmaps and Bloom-Based Indexing in ML Pipelines}
 
-Roaring Bitmaps~\cite{roaring2016} are the dominant compressed-bitmap
-format in modern data systems
-\cite{lucene,druid,spark,pinot}. Their use in ML pipelines is mostly
-\emph{adjacent} to the training loop: notably,
-\textbf{LSHBloom}~\cite{lshbloom2024} and the
-\textbf{Dolma corpus}~\cite{dolma2024} use MinHash plus Bloom filters
+Roaring Bitmaps~\citep{roaring2016} are the dominant compressed-bitmap
+format in modern data systems~\citep{druid}. Their use in ML
+pipelines is mostly \emph{adjacent} to the training loop: notably,
+\textbf{LSHBloom}~\citep{lshbloom2024} and the
+\textbf{Dolma corpus}~\citep{dolma2024} use MinHash plus Bloom filters
 for extreme-scale near-duplicate document detection in LLM
-pretraining corpora; \cite{lee2022dedup} establishes that such
+pretraining corpora; \citet{lee2022dedup} establishes that such
 deduplication measurably improves downstream LLM
-quality. \textbf{MegaScale}~\cite{megascale2024} documents that
-data-loading bottlenecks emerge at the 10{,}000-GPU scale.
+quality. \textbf{MegaScale}~\citep{megascale2024} documents that
+data-loading bottlenecks emerge at the~10{,}000-GPU scale.
 
 We apply Roaring directly to the BSQ-token-position index, which~--- to
-our knowledge~--- is the first reported use of compressed bitmaps as a
-training-time data-selection primitive (as opposed to a
+our knowledge~--- is the first reported use of compressed bitmaps as
+a training-time data-selection primitive (as opposed to a
 data-preprocessing primitive) in a foundation model pipeline.
 
 %==============================================================================
@@ -278,8 +277,8 @@ data-preprocessing primitive) in a foundation model pipeline.
 \subsection{BSQ Token Posting Lists}\label{sec:posting-lists}
 %------------------------------------------------------------------------------
 
-Given a tokenized corpus~$T = (t_0, t_1, \ldots, t_{N-1})$, we build a
-Roaring posting list per token:
+Given a tokenized corpus~$T = (t_0, t_1, \ldots, t_{N-1})$, we build
+a Roaring posting list per token:
 \begin{equation}
 \mathrm{Bitmap}[t] = \{\, i : T[i] = t \,\}\quad \text{for each $t \in
 \mathrm{vocab}$}.
@@ -287,11 +286,11 @@ Roaring posting list per token:
 Three sets of posting lists are built in parallel: over coarse
 tokens~$s_1$, fine tokens~$s_2$, and full combined
 tokens~$t = s_1 \cdot 2^{s_2\text{-bits}} + s_2$. The bitmaps are
-serialized to disk once, after the tokenizer is trained, and loaded by
-every downstream training and analysis pipeline.
+serialized to disk once, after the tokenizer is trained, and loaded
+by every downstream training and analysis pipeline.
 
-\begin{lstlisting}[caption={Roaring stratified shock-bar sampling. The
-bitmap \texttt{rare\_union} is the Roaring \texttt{OR} of all
+\begin{lstlisting}[caption={Roaring stratified shock-bar sampling.
+The bitmap \texttt{rare\_union} is the Roaring \texttt{OR} of all
 shock-token posting lists, built once at initialization. Each call
 costs a single \texttt{np.random.choice} plus a
 concatenate.}, label={lst:dataloader}, float]
@@ -306,9 +305,9 @@ def _sample_positions(self, n):
 \end{lstlisting}
 
 This representation enables three corpus-scale operations:
-(i)~$O(1)$~position retrieval per token, (ii)~stratified sampling over
-arbitrary token sets via Roaring \texttt{OR},
-and~(iii)~$\mathrm{Cooc}$ analysis (\S\ref{sec:diagnostic}).
+(i)~$O(1)$~position retrieval per token, (ii)~stratified sampling
+over arbitrary token sets via Roaring \texttt{OR}, and (iii)~$\mathrm{Cooc}$
+analysis~(\S\ref{sec:diagnostic}).
 
 %------------------------------------------------------------------------------
 \subsection{Stratified Shock-Bar Dataloader}\label{sec:dataloader}
@@ -317,17 +316,16 @@ and~(iii)~$\mathrm{Cooc}$ analysis (\S\ref{sec:diagnostic}).
 Define a \emph{shock token} as a full token~$t$ with corpus
 count~$|\mathrm{Bitmap}[t]| \leq \tau$ for a small
 threshold~$\tau$. With~$\tau=5$ we identify~223 shock tokens
-covering~512 positions in our corpus. The shock-anchor set
-$S = \bigcup_t \mathrm{Bitmap}[t]$ (Roaring \texttt{OR} across shock
-tokens) is built once per training run.
+covering~512~positions in our corpus. The shock-anchor
+set~$S = \bigcup_t \mathrm{Bitmap}[t]$ (Roaring \texttt{OR} across
+shock tokens) is built once per training run.
 
 At each training step, a fraction~$f$ of the batch is sampled from~$S$
 with starting positions selected uniformly; the remaining~$(1-f)$ is
-sampled uniformly from the corpus complement. The full code is in
-Listing~\ref{lst:dataloader}; we use~$f=0.30$ throughout this
-paper. Unlike previous example-level stratified sampling
-(S-OHEM~\cite{sohem2017}, curriculum
-learning~\cite{curriculum_llm2025}), this operates at the
+sampled uniformly from the corpus complement. The full code is
+in~Listing~\ref{lst:dataloader}; we use~$f=0.30$ throughout the
+paper. Unlike previous example-level stratified
+sampling~\citep{sohem2017, curriculum_llm2025}, this operates at the
 \emph{token-occurrence} level, exploiting the fact that one shock
 token can be embedded inside a window of otherwise-common tokens.
 
@@ -336,10 +334,10 @@ token can be embedded inside a window of otherwise-common tokens.
 Diagnostic}\label{sec:diagnostic}
 %------------------------------------------------------------------------------
 
-The hierarchical BSQ formulation predicts $p(s_2 \mid s_1)$. If the
+The hierarchical BSQ formulation predicts~$p(s_2 \mid s_1)$. If the
 tokenizer's learned hierarchy is mechanistically meaningful, this
-conditional should be sharp: each~$s_1$ should be compatible with only
-a small subset of~$s_2$ values.
+conditional should be sharp: each~$s_1$ should be compatible with
+only a small subset of~$s_2$ values.
 
 For each active coarse token value~$v$, we compute:
 \begin{equation}
@@ -347,19 +345,19 @@ For each active coarse token value~$v$, we compute:
 \land s_2[i]=s_2 \,\}.
 \end{equation}
 The fraction~$|\mathrm{Cooc}[v]| / 2^{s_2}$ measures the
-\emph{hierarchical tightness} of coarse value~$v$. Aggregated, this is
-exactly the kind of utilization diagnostic that
-\cite{shrinks_codebook2026} calls for. The original Kronos
-paper~\cite{kronos2025} and the BSQ paper~\cite{bsq2024} report only
+\emph{hierarchical tightness} of coarse value~$v$. Aggregated, this
+is exactly the kind of utilization diagnostic
+that~\citet{shrinks_codebook2026} calls for. The original Kronos
+paper~\citep{kronos2025} and the BSQ paper~\citep{bsq2024} report only
 aggregate cross-entropy losses on the fine head, which average out
 this conditional structure.
 
-We also report the integer-space density of
-$\mathrm{Cooc}[v]$~--- the number of distinct~$s_2$ values divided by
-their span $(\max - \min + 1)$. A low density indicates
-the~$s_2$ values are scattered across integer encodings, exposing the
-important property that BSQ bit-positions carry no semantic
-ordering. We discuss the implications in~\S\ref{sec:cooc-results}.
+We also report the integer-space density of~$\mathrm{Cooc}[v]$ --- the
+number of distinct~$s_2$ values divided by their
+span~$(\max - \min + 1)$. A low density indicates the~$s_2$ values
+are scattered across integer encodings, exposing the important
+property that BSQ bit-positions carry no semantic ordering. We
+discuss the implications in~\S\ref{sec:cooc-results}.
 
 %==============================================================================
 \section{Experiments}\label{sec:experiments}
@@ -368,73 +366,74 @@ ordering. We discuss the implications in~\S\ref{sec:cooc-results}.
 \subsection{Setup}
 
 \textbf{Data.} BTC-USD hourly OHLCV from~2024-05-23 to~2026-05-23
-(17{,}352 bars) via \texttt{yfinance}. Volume-dollar (``amount'') is
-derived as~volume$\times$mean(O,H,L,C). 80/20 chronological
-split: 13{,}881 train, 3{,}471 test.
+(17{,}352~bars) via \texttt{yfinance}. Volume-dollar
+(``amount'') is derived as
+volume$\,\times\,$mean$(O,H,L,C)$. 80/20 chronological split:
+13{,}881~train, 3{,}471~test.
 
-\textbf{Tokenizer.} \texttt{NeoQuasar/Kronos-Tokenizer-base} with
-$s_1=s_2=10$, frozen throughout.
+\textbf{Tokenizer.} \texttt{NeoQuasar/Kronos-Tokenizer-base}
+with~$s_1=s_2=10$, frozen throughout.
 
-\textbf{Predictor.} \texttt{NeoQuasar/Kronos-small} (24.7M parameters),
-used zero-shot and as initialization for fine-tuning.
+\textbf{Predictor.} \texttt{NeoQuasar/Kronos-small}
+(24.7M~parameters), used zero-shot and as initialization for
+fine-tuning.
 
 \textbf{Hardware.} Fine-tuning on Apple~M-series with MPS;
-training-time benchmark on a Lambda Labs NVIDIA~A10 (24~GB). Single
-seed, with the variance implications discussed in
-\S\ref{sec:limitations}.
+training-time benchmark on an NVIDIA~A10~(24~GB). Single seed, with
+the variance implications discussed in~\S\ref{sec:limitations}.
 
 %------------------------------------------------------------------------------
 \subsection{Corpus characterization}\label{sec:corpus}
 %------------------------------------------------------------------------------
 
-Table~\ref{tab:vocab} summarizes vocabulary utilization. Of the nominal
-$2^{20}=1{,}048{,}576$ tokens, only~417 (0.04\%) are observed. The
-coarse~$s_1$ vocabulary uses 163~of~1024 values; the
-fine~$s_2$ vocabulary uses 91~of~1024. To our knowledge no comparable
+Table~\ref{tab:vocab} summarizes vocabulary utilization. Of the
+nominal~$2^{20}=1{,}048{,}576$ tokens, only~417~(0.04\%) are
+observed. The coarse~$s_1$ vocabulary uses 163~of~1024 values; the
+fine~$s_2$ vocabulary uses~91~of~1024. To our knowledge no comparable
 characterization exists for any BSQ-style tokenizer on financial
-data; the closest comparable measurement is FSQ's reported
-\mbox{$\sim$100\%} utilization on image
-reconstruction~\cite{fsq2024}~--- almost three orders of magnitude
+data; the closest comparable measurement is FSQ's
+reported \mbox{$\sim$100\%} utilization on image
+reconstruction~\citep{fsq2024}~--- almost three orders of magnitude
 denser.
 
 \begin{table}[t]
 \centering
-\caption{BSQ vocabulary utilization on 17{,}352 BTC hourly
-bars. Compare with FSQ's reported \mbox{$\sim$100\%}~utilization on
-image reconstruction~\cite{fsq2024}.}\label{tab:vocab}
+\caption{BSQ vocabulary utilization on 17{,}352 BTC hourly bars.
+Compare with FSQ's reported \mbox{$\sim$100\%} utilization on image
+reconstruction~\citep{fsq2024}.}\label{tab:vocab}
 \begin{tabular}{lrrrr}
 \toprule
 Vocabulary & Bits & Size & Used & Entropy (bits) \\
 \midrule
 $s_1$ (coarse) & 10 & 1{,}024 & 163 & 5.15~(of~10.0) \\
 $s_2$ (fine)   & 10 & 1{,}024 &  91 & 4.58~(of~10.0) \\
-Full $s_1\cdot s_2$ & 20 & 1{,}048{,}576 & 417 & 6.24~(of~20.0) \\
+Full $s_1 \cdot s_2$ & 20 & 1{,}048{,}576 & 417 & 6.24~(of~20.0) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Token frequency is strongly concentrated: the top~10 full tokens
-cover 44.5\% of all bars; the top~49 cover~80\%. The mean
-$s_1$~run-length is~2.4~bars with a maximum of~80~bars
-(17.6\% of runs are $\geq 3$~bars), providing the contiguity structure
-that Roaring's run-length encoding compresses well.
+cover~44.5\% of all bars; the top~49 cover~80\%. The mean~$s_1$
+run-length is~2.4~bars with a maximum of~80~bars
+(17.6\% of runs are~$\geq 3$~bars), providing the contiguity
+structure that Roaring's run-length encoding compresses well.
 Figure~\ref{fig:tokens} visualises the full distribution.
 
-\begin{figure*}[t]
+\begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/fig1_token_distribution.png}
   \caption{BSQ token analysis on 17{,}352 BTC-USD hourly bars.
   \emph{Top row:} $s_1$ (coarse) and $s_2$ (fine) token frequency
-  distributions. \emph{Middle:} full $s_1\!\cdot\!s_2$ token frequency
-  sorted by rank; the top~49 tokens cover~80\% of all bars (red
-  dashed line). \emph{Bottom-left:} $s_1$ run-length distribution
-  (consecutive bars sharing the same coarse mood) showing the
-  long-tail clustering structure. \emph{Bottom-right:} number of
-  distinct~$s_2$ tokens observed per~$s_1$ context;
+  distributions. \emph{Middle:} full $s_1\!\cdot\!s_2$ token
+  frequency sorted by rank; the top~49 tokens cover~80\% of all bars
+  (red dashed line). \emph{Bottom-left:} $s_1$ run-length
+  distribution (consecutive bars sharing the same coarse mood)
+  showing the long-tail clustering structure. \emph{Bottom-right:}
+  number of distinct~$s_2$ tokens observed per~$s_1$ context;
   all~163 active~$s_1$ values use at most~8 of the~1024 possible fine
   tokens.}
   \label{fig:tokens}
-\end{figure*}
+\end{figure}
 
 %------------------------------------------------------------------------------
 \subsection{Posting list compression}\label{sec:compression}
@@ -445,19 +444,20 @@ bitmaps versus an equivalent raw \texttt{uint32} list of positions.
 
 \begin{table}[t]
 \centering
-\caption{Roaring posting list compression versus raw \texttt{uint32}
-position lists. Best-case ratio of~1.99$\times$ is achieved on common
-tokens whose occurrences form long contiguous runs (compressed via
-run containers). Worst-case ratio of~0.22$\times$ is for ultra-rare
-tokens where Roaring's per-container overhead exceeds the
+\caption{Roaring posting list compression versus
+raw \texttt{uint32} position lists. Best-case ratio
+of~$1.99\times$ is achieved on common tokens whose occurrences form
+long contiguous runs (compressed via run containers). Worst-case
+ratio of~$0.22\times$ is for ultra-rare tokens where Roaring's
+per-container overhead exceeds the
 payload.}\label{tab:compression}
 \begin{tabular}{lrrr}
 \toprule
 Bitmap set & Raw (KB) & Roaring (KB) & Ratio \\
 \midrule
-$s_1$ posting lists      & 67.8 & 36.4 & 1.86$\times$ \\
-Full-token posting lists & 67.8 & 40.4 & 1.68$\times$ \\
-Per-bitmap min / median / max &  & & 0.22 / 1.36 / 1.99 \\
+$s_1$ posting lists      & 67.8 & 36.4 & $1.86\times$ \\
+Full-token posting lists & 67.8 & 40.4 & $1.68\times$ \\
+Per-bitmap min / median / max &  & & $0.22$ / $1.36$ / $1.99$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -474,26 +474,25 @@ covering~512 positions):
 membership against a shock-token set.
 \item \textbf{Roaring \texttt{OR}}: union of 223~Roaring bitmaps.
 \end{itemize}
-Averaged over 1{,}000 repetitions on a Lambda Labs A10:
-linear scan takes~0.71~ms; Roaring \texttt{OR} takes~0.062~ms~--- an
-11.4$\times$ speedup. Linear scan is~$O(N)$ in corpus size; Roaring
+Averaged over~1{,}000 repetitions on a Lambda~Labs~A10: linear scan
+takes~0.71~ms; Roaring \texttt{OR} takes~0.062~ms~--- an
+$11.4\times$ speedup. Linear scan is~$O(N)$ in corpus size; Roaring
 \texttt{OR} scales with the number of touched container chunks, not
-the total corpus. Extrapolating to the full~12B-record Kronos corpus,
-linear scan extends to approximately~9.4~minutes per query; the
-Roaring estimate remains under one minute under pessimistic
+the total corpus. Extrapolating to the full~12B-record Kronos
+corpus, linear scan extends to approximately~9.4~minutes per query;
+the Roaring estimate remains under one minute under pessimistic
 assumptions. While this operation is rare during the training loop
 itself (built once, reused per-epoch), it is a hot path for
 \emph{offline} corpus operations: curriculum design, near-duplicate
-detection (cf. LSHBloom~\cite{lshbloom2024},
-Dolma~\cite{dolma2024}), and rare-event auditing for evaluation.
+detection (cf.~\citet{lshbloom2024} and \citet{dolma2024}), and
+rare-event auditing for evaluation.
 
 %------------------------------------------------------------------------------
-\subsection{Stratified dataloader batch
-quality}\label{sec:batch-quality}
+\subsection{Stratified dataloader batch quality}\label{sec:batch-quality}
 %------------------------------------------------------------------------------
 
 Table~\ref{tab:dataloader} compares per-batch token statistics across
-256~batches of~32 windows each, using uniform sampling (Vanilla) and
+256~batches of 32 windows each, using uniform sampling (Vanilla) and
 stratified shock-anchored sampling with~$f=0.30$ (Roaring).
 
 \begin{table}[t]
@@ -515,44 +514,40 @@ Top-5 token dominance (\%)      & 27.8  & 27.2  \\
 \end{tabular}
 \end{table}
 
-Roaring increases rare-token coverage by~27\% (relative), entropy
-by~0.063~bits, and slightly reduces top-token
-dominance. These improvements are achieved without modifying any
-model code; the only change is the choice of training-time sampler.
-Figure~\ref{fig:dataloader} visualises the per-window rare-token
-hit distribution and the token frequency rank curve under each
-sampler.
+Roaring increases rare-token coverage by~27\%~(relative), entropy
+by~0.063~bits, and slightly reduces top-token dominance. These
+improvements are achieved without modifying any model code; the only
+change is the choice of training-time sampler.
+Figure~\ref{fig:dataloader} visualises the per-window rare-token hit
+distribution and the token frequency rank curve under each sampler.
 
-\begin{figure*}[t]
+\begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/fig2_dataloader_benchmark.png}
-  \caption{Vanilla uniform vs.\ Roaring stratified
-  ($f=0.30$) dataloader.
-  \emph{Left:} histogram of the number of rare~(shock) tokens per
-  window; Roaring's distribution has a heavier tail.
+  \caption{Vanilla uniform vs.\ Roaring stratified~($f=0.30$)
+  dataloader. \emph{Left:} histogram of the number of rare~(shock)
+  tokens per window; Roaring's distribution has a heavier tail.
   \emph{Middle:} token frequency rank curves on a log-log scale; the
   two samplers behave identically at the head (common tokens) but
   Roaring has more weight at the tail (rare tokens). \emph{Right:}
   summary metrics. Roaring increases token-distribution entropy
-  by~0.063 bits and rare-token coverage by~27\% (relative).}
+  by~0.063~bits and rare-token coverage by~27\%~(relative).}
   \label{fig:dataloader}
-\end{figure*}
+\end{figure}
 
 %------------------------------------------------------------------------------
-\subsection{Hierarchical co-occurrence
-findings}\label{sec:cooc-results}
+\subsection{Hierarchical co-occurrence findings}\label{sec:cooc-results}
 %------------------------------------------------------------------------------
 
 We compute~$\mathrm{Cooc}[v]$ for each of the 163~active~$s_1$
 values. The findings are striking:
-
 \begin{itemize}
 \item \textbf{52 of 163 active~$s_1$ values have exactly
 one~$s_2$ partner.} For those values, the fine-token prediction is
 fully determined by the coarse prediction; the
-fine~softmax over 1024 classes is wasted compute.
-\item All 163~active~$s_1$ values use at most~8 fine tokens out of
-1024 available.
+fine~softmax over~1024 classes is wasted compute.
+\item All 163~active~$s_1$ values use at most~8 fine tokens out
+of~1024 available.
 \item The mean number of distinct~$s_2$ partners per active~$s_1$
 is~2.56; the median is~2.
 \end{itemize}
@@ -562,9 +557,9 @@ Table~\ref{tab:cooc} shows the tightest and loosest~$s_1$ values.
 \begin{table}[t]
 \centering
 \caption{Hierarchical co-occurrence diagnostic on BSQ tokens. Even
-the most common coarse token~$s_1=501$ (2{,}283 occurrences) uses only
-six of the 1024 possible fine tokens. The 52~``deterministic'' coarse
-values ($|\mathrm{Cooc}|=1$) are not shown
+the most common coarse token~$s_1=501$ (2{,}283 occurrences) uses
+only six of the~1024 possible fine tokens. The 52~``deterministic''
+coarse values~($|\mathrm{Cooc}|=1$) are not shown
 individually.}\label{tab:cooc}
 \begin{tabular}{rrl}
 \toprule
@@ -580,39 +575,40 @@ $s_1$ & $|\mathrm{Cooc}|$ & $s_2$ values \\
 \end{tabular}
 \end{table}
 
-\textbf{Hamming-distance neighborhood.}
-$\mathrm{Cooc}[v]$ values are typically \emph{scattered} in integer
-space (median density~0.075) but \emph{clustered} in Hamming
+\textbf{Hamming-distance neighborhood.} The~$\mathrm{Cooc}[v]$ values
+are typically \emph{scattered} in integer space~(median
+density~0.075) but \emph{clustered} in Hamming
 space. For~$s_1=991$, the eight co-occurring~$s_2$ values include
-pairs differing by a single bit-flip~--- e.g.\
-$s_2=271$ and~$s_2=783$ (Hamming distance~1, integer distance~512).
-The integer distance between BSQ tokens is not a proxy for semantic
-similarity; the Hamming distance is.
+pairs differing by a single bit-flip~--- e.g., $s_2=271$
+and~$s_2=783$~(Hamming distance~1, integer distance~512). The integer
+distance between BSQ tokens is not a proxy for semantic similarity;
+the Hamming distance is.
 
 \textbf{Implication.} The conditional sparsity finding suggests an
 immediate inference-time optimization: cache the deterministic
-$s_1 \to s_2$ map for~52~of~163~active coarse tokens, eliminating
-the fine-head softmax for the fraction of bars where it is
-redundant. We leave this engineering optimization to future work but
-flag it as an immediate consequence of the diagnostic.
+$s_1 \to s_2$ map for the 52~of~163 active coarse tokens with
+$|\mathrm{Cooc}|=1$, eliminating the fine-head softmax for the
+fraction of bars where it is redundant. We leave this engineering
+optimization to future work but flag it as an immediate consequence
+of the diagnostic.
 
 %------------------------------------------------------------------------------
 \subsection{Training-time benchmark}\label{sec:timing}
 %------------------------------------------------------------------------------
 
-We measured per-step time breakdown on an NVIDIA~A10 using
-\texttt{Kronos-base} (102M~parameters), batch size~32, sequence
-length~512, averaged over 100~timed batches after 5~warmup batches.
-Each phase was isolated with explicit
-\texttt{torch.cuda.synchronize()}.
+We measured per-step time breakdown on an NVIDIA~A10
+using \texttt{Kronos-base}~(102M~parameters), batch size~32,
+sequence length~512, averaged over~100 timed batches after~5 warmup
+batches. Each phase was isolated with
+explicit \texttt{torch.cuda.synchronize()}.
 
 \begin{table}[t]
 \centering
-\caption{Per-step time breakdown on NVIDIA~A10
-(\texttt{Kronos-base}, B=32, T=512). ``$\Delta$'' is the Roaring
-minus Vanilla time per phase. Forward + backward dominate
-($>95\%$); data loading and H2D transfer together are
-$<0.05\%$.}\label{tab:timing}
+\caption{Per-step time breakdown on
+NVIDIA~A10~(\texttt{Kronos-base}, B=32, T=512). ``$\Delta$'' is the
+Roaring minus Vanilla time per phase. Forward + backward
+dominate~($>95\%$); data loading and H2D transfer together
+are~$<0.05\%$.}\label{tab:timing}
 \begin{tabular}{lrrr}
 \toprule
 Phase & Vanilla (ms) & Roaring (ms) & $\Delta$ \\
@@ -634,60 +630,61 @@ Figure~\ref{fig:timing} visualises the per-phase breakdown as
 stacked and side-by-side bars; the forward + backward bars dominate
 the step in both samplers.
 
-\begin{figure*}[t]
+\begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/fig3_a10_step_breakdown.png}
   \caption{Per-step time breakdown on NVIDIA~A10 with
-  Kronos-base (B=32, T=512).
-  \emph{Left:} stacked bars showing each phase's contribution to total
-  step time; forward and backward together are~$>95\%$ of every step.
-  \emph{Right:} side-by-side per-phase comparison. The
-  data-loading and H2D-transfer phases (the only ones Roaring affects)
-  are barely visible on this scale. End-to-end speedup is
-  $0.965\times$, within run-to-run noise.}
+  Kronos-base~(B=32, T=512). \emph{Left:} stacked bars showing each
+  phase's contribution to total step time; forward and backward
+  together are~$>95\%$ of every step. \emph{Right:} side-by-side
+  per-phase comparison. The data-loading and H2D-transfer phases
+  (the only ones Roaring affects) are barely visible on this scale.
+  End-to-end speedup is~$0.965\times$, within run-to-run noise.}
   \label{fig:timing}
-\end{figure*}
+\end{figure}
 
-\textbf{Honest interpretation.} The end-to-end ratio of~0.965$\times$
+\textbf{Honest interpretation.} The end-to-end ratio of~$0.965\times$
 falls within run-to-run noise of the forward and backward times,
-which themselves vary by several percent across 100~batches. We do
-\emph{not} claim a wall-clock training speedup at this configuration.
-The contribution is that Roaring stratified sampling imposes
-\emph{zero measurable} training-time overhead. The conditions under
-which data-loading speedups translate to wall-clock savings~--- mixed
-precision and Flash Attention compressing forward/backward; small
-models; multi-node clusters where data must traverse network
-\cite{megascale2024,computational_bottlenecks2024}~--- are not
-satisfied in our single-A10 test.
+which themselves vary by several percent across~100~batches. We do
+\emph{not} claim a wall-clock training speedup at this
+configuration. The contribution is that Roaring stratified sampling
+imposes \emph{zero measurable} training-time overhead. The
+conditions under which data-loading speedups translate to wall-clock
+savings~--- mixed precision and Flash Attention compressing
+forward/backward, small models, multi-node clusters where data must
+traverse network~\citep{megascale2024,
+computational_bottlenecks2024}~--- are not satisfied in our
+single-A10 test.
 
 %------------------------------------------------------------------------------
 \subsection{Fine-tune backtest}\label{sec:backtest}
 %------------------------------------------------------------------------------
 
 We fine-tune \texttt{Kronos-small} for~5 epochs on the train split
-using two samplers (Vanilla uniform; Roaring stratified with~$f=0.30$).
-Both use AdamW (LR~$4\times10^{-5}$, $\beta=(0.9, 0.95)$, weight
-decay~0.1), gradient clipping at~3.0, OneCycleLR schedule. Each
-fine-tune completes in~$\approx 280$~s on Apple~M-series.
+using two samplers (Vanilla uniform; Roaring stratified
+with~$f=0.30$). Both use AdamW with learning rate~$4\times10^{-5}$,
+$\beta=(0.9, 0.95)$, weight decay~0.1, gradient clipping at~3.0, and
+OneCycleLR schedule. Each fine-tune completes
+in~$\approx 280$~seconds on Apple~M-series.
 
 Validation losses converge nearly identically (Vanilla~1.2143;
 Roaring~1.2151), confirming that the Roaring distribution shift does
-not degrade aggregate likelihood. Per-epoch wall-clock differs by less
-than~2\% (within noise).
+not degrade aggregate likelihood. Per-epoch wall-clock differs by
+less than~2\% (within noise).
 
 We evaluate by rolling autoregressive inference on the test split
 (675~rolling windows, lookback~90, prediction length~10,
 temperature~0.6, top-$p$~0.9, Monte~Carlo sample count~5)~---
 matching Kronos's published Qlib backtest
-configuration~\cite{kronos2025}. The signal is~$\sigma_{\text{last}}
-= \hat{c}_{T+10} - c_T$ (predicted close minus current
-close). Position is long-only, threshold at zero, with~0.15\%
-round-trip cost.
+configuration~\citep{kronos2025}. The signal
+is~$\sigma_{\text{last}} = \hat{c}_{T+10} - c_T$~(predicted close
+minus current close). Position is long-only, threshold at zero,
+with~0.15\% round-trip cost.
 
 \begin{table}[t]
 \centering
-\caption{Fine-tune backtest using
-the~$\sigma_{\text{last}}$ signal, 675~rolling windows over the test
+\caption{Fine-tune backtest using the~$\sigma_{\text{last}}$ signal,
+675~rolling windows over the test
 period~(2025-12-29 to 2026-05-23). Buy-and-hold over the same window
 returned~$-15.16\%$.}\label{tab:backtest}
 \begin{tabular}{lrrrr}
@@ -703,15 +700,15 @@ Roaring-FT  & $-0.004$ & $-38.1\%$ & $-3.69$ & $-38.4\%$ \\
 
 \textbf{Two observations.} First, aggregate RankIC slightly favors
 Vanilla-FT~($+0.021$ vs.\ Roaring's~$-0.004$); both fine-tunes shift
-the IC from~$-0.021$~(zero-shot) toward zero. Second, Roaring-FT wins
-on P\&L metrics: 2.9~percentage points less cumulative loss, higher
-Sharpe, and a 2.7-point smaller maximum drawdown. The
-mechanism is that the shock-trained model is less confident on benign
-bars, executes fewer long positions, and pays less transaction
-cost~--- a phenomenon documented in the active-management literature
-\cite{grinold1999active} where lower-confidence lower-turnover
-strategies can outperform high-confidence high-turnover strategies
-after costs.
+the IC from~$-0.021$~(zero-shot) toward zero. Second, Roaring-FT
+wins on P\&L metrics: 2.9~percentage points less cumulative loss,
+higher Sharpe, and a 2.7-point smaller maximum drawdown. The
+mechanism is that the shock-trained model is less confident on
+benign bars, executes fewer long positions, and pays less
+transaction cost~--- a phenomenon documented in the active-management
+literature~\citep{grinold1999active} where lower-confidence
+lower-turnover strategies can outperform high-confidence
+high-turnover strategies after costs.
 
 \begin{table}[t]
 \centering
@@ -735,26 +732,27 @@ Month & Zero-shot & Vanilla-FT & Roaring-FT \\
 
 The April~2026 result is the cleanest evidence supporting the
 hypothesis that shock-token overweighting helps in volatile
-regime-change periods. The May~2026 result is the counterfactual: in
-calm trending months, the shock-trained model is excessively
+regime-change periods. The May~2026 result is the counterfactual:
+in calm trending months, the shock-trained model is excessively
 conservative. Figure~\ref{fig:backtest} shows the cumulative-return
-trajectories and the per-month RankIC heatmap that makes this
-regime asymmetry visible.
+trajectories and the per-month RankIC heatmap that makes this regime
+asymmetry visible.
 
-\begin{figure*}[t]
+\begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/fig4_backtest_comparison.png}
-  \caption{Three-way backtest comparison (zero-shot,
-  vanilla-finetuned, Roaring-finetuned) on the BTC-USD~1h test split.
-  \emph{Top:} cumulative return of the $\sigma_{\text{last}}$ signal
-  with 0.15\% round-trip cost, against buy-and-hold benchmark
-  (black dashed). \emph{Middle:} RankIC and Sharpe by signal type.
-  \emph{Bottom:} monthly RankIC heatmap. Green cells indicate
-  predictive months, red cells anti-predictive. Roaring-FT's
-  April~2026 cell~($+0.195$) is the highest-IC cell of any
-  model-month combination in the experiment.}
+  \caption{Three-way backtest comparison~(zero-shot,
+  vanilla-finetuned, Roaring-finetuned) on the BTC-USD~1h test
+  split. \emph{Top:} cumulative return of
+  the~$\sigma_{\text{last}}$ signal with~0.15\% round-trip cost,
+  against buy-and-hold benchmark~(black dashed). \emph{Middle:}
+  RankIC and Sharpe by signal type. \emph{Bottom:} monthly RankIC
+  heatmap. Green cells indicate predictive months, red cells
+  anti-predictive. Roaring-FT's April~2026 cell~($+0.195$) is the
+  highest-IC cell of any model-month combination in the
+  experiment.}
   \label{fig:backtest}
-\end{figure*}
+\end{figure}
 
 %==============================================================================
 \section{Discussion}\label{sec:discussion}
@@ -764,69 +762,71 @@ regime asymmetry visible.
 the consistent drawdown reduction support the hypothesis that
 overweighting shock tokens during training improves performance on
 volatile regime-change periods, at modest cost in calm regimes. The
-aggregate sign of the effect depends on the regime composition of the
-test period. We make no claim of universal dominance; we report the
-observed regime asymmetry honestly.
+aggregate sign of the effect depends on the regime composition of
+the test period. We make no claim of universal dominance; we report
+the observed regime asymmetry honestly.
 
 \textbf{The hierarchical diagnostic as a durable contribution.} The
 finding that~52 of~163 active coarse tokens are paired with a
 deterministic fine token is independent of the stratified-sampler
 results. It directly answers the call
-of~\cite{shrinks_codebook2026} for diagnostic suites that go beyond
-reconstruction loss. As foundation models for non-language modalities
-adopt discrete tokenization at
-scale~\cite{lfq2024,bsq2024,rvq_audio2024,kronos2025}, this class of
-diagnostic will be needed for every new tokenizer. Our Roaring posting
-list infrastructure makes such diagnostics computable on
-12-billion-record corpora at sub-second cost.
+of~\citet{shrinks_codebook2026} for diagnostic suites that go beyond
+reconstruction loss. As foundation models for non-language
+modalities adopt discrete tokenization at scale~\citep{lfq2024,
+bsq2024, rvq_audio2024, kronos2025}, this class of diagnostic will be
+needed for every new tokenizer. Our Roaring posting list
+infrastructure makes such diagnostics computable on~12-billion-record
+corpora at sub-second cost.
 
-\textbf{Where Roaring is actually useful in ML pipelines.} The A10
-timing result clarifies the right framing. The hot training loop on
-modern GPUs is dominated by forward+backward
-compute~\cite{megascale2024}; data loading is invisible at typical
+\textbf{Where Roaring is actually useful in ML pipelines.} The
+A10~timing result clarifies the right framing. The hot training
+loop on modern GPUs is dominated by forward+backward
+compute~\citep{megascale2024}; data loading is invisible at typical
 configuration. The right targets for Roaring are \emph{offline}
 corpus-scale operations: token-occurrence statistics, deduplication
-\`{a} la~\cite{lshbloom2024,dolma2024,lee2022dedup}, curriculum
-design, and rare-event auditing for evaluation. The stratified
-sampler we present is the rare exception that touches the
-training~loop, and even there the benefit is data quality, not
-wall-clock speed.
+\`{a} la~\citet{lshbloom2024}, \citet{dolma2024},
+and~\citet{lee2022dedup}, curriculum design, and rare-event auditing
+for evaluation. The stratified sampler we present is the rare
+exception that touches the training loop, and even there the
+benefit is data quality, not wall-clock speed.
 
 \textbf{Combinability with existing pipelines.} The technique is
 orthogonal to most prior work. It composes with: dedup pipelines
-(\cite{lshbloom2024} reduces corpus duplicates; our work reweights
+(\citealp{lshbloom2024} reduces corpus duplicates; our work reweights
 within the deduplicated corpus); curriculum
-learning~\cite{curriculum_llm2025} (our stratification can be the
+learning~\citep{curriculum_llm2025} (our stratification can be the
 ``hard'' bucket in a document-level curriculum); and codebook-design
-choices~\cite{fsq2024,lfq2024} (the same posting-list infrastructure
-applies to any implicit-codebook tokenizer).
+choices~\citep{fsq2024, lfq2024} (the same posting-list
+infrastructure applies to any implicit-codebook tokenizer).
 
 %==============================================================================
 \section{Limitations}\label{sec:limitations}
 %==============================================================================
 
 \begin{itemize}
-\item \textbf{Single asset (BTC-USD).} Replication on equities, FX,
-and commodities is needed to claim ``financial foundation models'' in
-general. Our diagnostic results in particular may be BTC-specific.
-\item \textbf{Single seed.} The~$\pm 0.025$ aggregate~RankIC gap
-between Vanilla-FT and Roaring-FT is likely within seed variance.
-A multi-seed sweep is needed for statistical significance.
-\item \textbf{Short fine-tune (5~epochs).} The model under longer
+\item \textbf{Single asset~(BTC-USD).} Replication on equities, FX,
+and commodities is needed to claim ``financial foundation models''
+in general. Our diagnostic results in particular may be
+BTC-specific.
+\item \textbf{Single seed.} The~$\pm 0.025$ aggregate RankIC gap
+between Vanilla-FT and Roaring-FT is likely within seed variance. A
+multi-seed sweep is needed for statistical significance.
+\item \textbf{Short fine-tune~(5 epochs).} The model under longer
 training may absorb the shifted distribution more
-completely~\cite{curriculum_llm2025}; we do not measure this.
-\item \textbf{Single regime test period.} Dec~2025--May~2026 is a
-bear-with-recovery regime. A bull-market test period would likely
-shift the signal/asymmetry trade-off.
+completely~\citep{curriculum_llm2025}; we do not measure this.
+\item \textbf{Single regime test period.}
+Dec~2025--May~2026 is a bear-with-recovery regime. A bull-market
+test period would likely shift the signal/asymmetry trade-off.
 \item \textbf{Frozen tokenizer.} We apply Roaring during stage-2
 fine-tuning only. Applying the same techniques during stage-1
-tokenizer training~\cite{shrinks_codebook2026} is left as future
+tokenizer training~\citep{shrinks_codebook2026} is left as future
 work.
-\item \textbf{Single hardware tier.} A10~(24~GB) timing; H100~/~B200
-with~$3$--$5\times$ higher arithmetic throughput may shift the
-data-loading fraction upward, but we do not measure this.
+\item \textbf{Single hardware tier.} A10~(24~GB) timing;
+H100~/~B200 with~$3$--$5\times$ higher arithmetic throughput may
+shift the data-loading fraction upward, but we do not measure
+this.
 \item \textbf{Unswept shock fraction.} $f=0.30$ is the only setting
-reported; a sweep over~$f \in \{0.15, 0.30, 0.45, 0.60\}$ would
+reported; a sweep over $f \in \{0.15, 0.30, 0.45, 0.60\}$ would
 likely identify a regime-dependent optimum.
 \end{itemize}
 
@@ -837,24 +837,54 @@ likely identify a regime-dependent optimum.
 We presented a Roaring-Bitmap augmentation of the Kronos financial
 foundation model pipeline that exploits the extreme sparsity and
 regime clustering of BSQ-tokenized financial data. The three
-contributions~--- a stratified shock-bar dataloader with zero training
-overhead, an~11.4$\times$ faster corpus-scale rare-event lookup, and
-a novel hierarchical co-occurrence diagnostic~--- bridge three
-literatures (financial time-series foundation
-models~\cite{kronos2025}, discrete
-tokenization~\cite{bsq2024,fsq2024,lfq2024}, and compressed-bitmap
-data systems~\cite{roaring2016}) that have not previously
+contributions~--- a stratified shock-bar dataloader with zero
+training overhead, an~$11.4\times$ faster corpus-scale rare-event
+lookup, and a novel hierarchical co-occurrence diagnostic~--- bridge
+three literatures (financial time-series foundation
+models~\citep{kronos2025}, discrete tokenization~\citep{bsq2024,
+fsq2024, lfq2024}, and compressed-bitmap data
+systems~\citep{roaring2016}) that have not previously
 intersected. The hierarchical diagnostic, by revealing that 52~of~163
 active coarse tokens are paired with a deterministic fine token,
-provides the first non-vision measurement directly answering the call
-of~\cite{shrinks_codebook2026} for better discrete-tokenizer
+provides the first non-vision measurement directly answering the
+call of~\citet{shrinks_codebook2026} for better discrete-tokenizer
 diagnostic suites. As BSQ-style tokenization is increasingly adopted
 for non-language foundation models, the infrastructure for measuring
 and exploiting token sparsity will become as central as the
 tokenizer itself.
 
 %==============================================================================
-\bibliographystyle{ACM-Reference-Format}
+\subsubsection*{Broader Impact Statement}
+%==============================================================================
+
+This work studies infrastructure for training financial-market
+foundation models. We see two classes of potential downstream
+impact.
+
+\emph{Quantitative trading applications.} Models trained with the
+stratified sampler may exhibit different out-of-sample behavior
+on shock and regime-change periods than uniformly-sampled
+baselines, with possible implications for risk-managed trading
+systems. We caution against using any of the backtest numbers
+reported here as financial advice: the test period is short, the
+asset universe is one symbol, and the cost model is a simple
+round-trip estimate. Reproducing the methodology on
+asset-class-appropriate, multi-symbol, walk-forward backtests is
+mandatory before any production deployment.
+
+\emph{Tokenizer diagnostic standardization.} The hierarchical
+co-occurrence diagnostic is generic and could be adopted as a
+standard reporting metric in future BSQ/LFQ/FSQ tokenizer papers.
+We see this as a positive impact: more transparency about learned
+tokenizer structure reduces the chance that downstream foundation
+models inherit unmeasured pathologies in their token alphabets.
+There is no obvious negative-impact path for the diagnostic itself.
+
+We do not see a likely misuse vector that is unique to this work
+beyond the general considerations applicable to any open-source
+financial ML research.
+
 \bibliography{paper}
+\bibliographystyle{tmlr}
 
 \end{document}
