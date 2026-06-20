@@ -58,14 +58,18 @@ def make_dataset(sampler: str, split: str, seed: int, shock_frac: float = SHOCK_
             seq_len=SEQ_LEN,
             steps_per_epoch=steps * BATCH_SIZE,
             seed=effective_seed,
+            split=split,
             rare_threshold=RARE_THRESHOLD,
             shock_frac=shock_frac,
         )
     else:
+        # Validation always uses uniform sampling over its own held-out region,
+        # so both samplers are scored on the same leakage-free val distribution.
         return VanillaDataset(
             seq_len=SEQ_LEN,
             steps_per_epoch=steps * BATCH_SIZE,
             seed=effective_seed,
+            split=split,
         )
 
 
