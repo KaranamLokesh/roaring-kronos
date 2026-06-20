@@ -33,6 +33,9 @@ T              = 0.6
 TOP_P          = 0.9
 CLIP           = 5.0
 STRIDE         = 5
+# Test region = the last (1 - TRAIN_FRAC) of the corpus. This boundary MUST
+# match training/roaring_dataloader.py:VAL_END_FRAC so the fine-tune never
+# trains or validates on any bar that the backtest scores.
 TRAIN_FRAC     = 0.80
 ROUND_TRIP_PCT = 0.0015
 BARS_PER_YEAR  = 8760 // STRIDE

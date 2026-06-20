@@ -19,6 +19,27 @@ from pyroaring import BitMap
 DATA_DIR   = os.path.join(os.path.dirname(__file__), '..', 'data')
 BITMAP_DIR = os.path.join(DATA_DIR, 'bitmaps')
 
+# Chronological split — MUST stay in lockstep with eval/run_backtest.py:TRAIN_FRAC.
+# Training and validation windows occupy [0, VAL_END_FRAC); the backtest scores
+# only [VAL_END_FRAC, 1.0] (the last 20%). No bar from the test region is ever
+# sampled during fine-tuning, which eliminates train/test leakage.
+TRAIN_END_FRAC = 0.70   # [0.00, 0.70)  → training windows
+VAL_END_FRAC   = 0.80   # [0.70, 0.80)  → validation windows  (== backtest test boundary)
+# [0.80, 1.00) is the backtest test region — never sampled here.
+
+
+def _region_bounds(split, T):
+    """Return [lo, hi) bar bounds for the requested split. None → full corpus."""
+    if split is None:
+        return 0, T
+    if split == 'train':
+        return 0, int(T * TRAIN_END_FRAC)
+    if split == 'val':
+        return int(T * TRAIN_END_FRAC), int(T * VAL_END_FRAC)
+    if split == 'test':
+        return int(T * VAL_END_FRAC), T
+    raise ValueError(f"Unknown split: {split!r}")
+
 
 def _load_corpus():
     """Load raw OHLCVA + precomputed token arrays from disk."""
@@ -58,24 +79,42 @@ class KronosWindowDataset(IterableDataset):
         positions  (seq_len,)     corpus positions (for debugging)
     """
 
-    def __init__(self, seq_len: int = 128, steps_per_epoch: int = 512, seed: int = 42):
+    def __init__(self, seq_len: int = 128, steps_per_epoch: int = 512,
+                 seed: int = 42, split: str | None = None):
         super().__init__()
         self.seq_len         = seq_len
         self.steps_per_epoch = steps_per_epoch
         self.rng             = np.random.default_rng(seed)
+        self.split           = split
 
         df, self.s1, self.s2, self.ft = _load_corpus()
         price_cols = ['open', 'high', 'low', 'close', 'volume', 'amount']
         self.x_norm  = _normalize(df[price_cols].values)
         self.stamps  = _time_features(df['timestamp'])
         self.T       = len(self.ft)
-        self.max_start = self.T - seq_len
+
+        # Restrict sampleable window starts to one chronological region so that
+        # a window [start, start+seq_len) never spills past the region boundary
+        # (and in particular never into the held-out backtest test period).
+        self.region_lo, self.region_hi = _region_bounds(split, self.T)
+        self.start_lo      = self.region_lo
+        self.start_hi_excl = self.region_hi - seq_len + 1   # exclusive upper bound
+        if self.start_hi_excl <= self.start_lo:
+            raise ValueError(
+                f"Region [{self.region_lo},{self.region_hi}) too small for "
+                f"seq_len={seq_len} (split={split!r})")
+        self.max_start = self.start_hi_excl - 1   # back-compat alias
 
     def _sample_positions(self, n: int) -> np.ndarray:
         raise NotImplementedError
 
     def __iter__(self):
         starts = self._sample_positions(self.steps_per_epoch)
+        # Shard across DataLoader workers so num_workers>1 does not duplicate
+        # windows (each worker holds an identical RNG-seeded copy of self).
+        info = torch.utils.data.get_worker_info()
+        if info is not None:
+            starts = starts[info.id::info.num_workers]
         for start in starts:
             end = start + self.seq_len
             yield (
@@ -91,7 +130,7 @@ class VanillaDataset(KronosWindowDataset):
     """Uniform random window sampling — the baseline."""
 
     def _sample_positions(self, n: int) -> np.ndarray:
-        return self.rng.integers(0, self.max_start, size=n)
+        return self.rng.integers(self.start_lo, self.start_hi_excl, size=n)
 
 
 class RoaringDataset(KronosWindowDataset):
@@ -112,10 +151,11 @@ class RoaringDataset(KronosWindowDataset):
         seq_len:         int   = 128,
         steps_per_epoch: int   = 512,
         seed:            int   = 42,
+        split:           str | None = None,
         rare_threshold:  int   = 5,
         shock_frac:      float = 0.3,
     ):
-        super().__init__(seq_len, steps_per_epoch, seed)
+        super().__init__(seq_len, steps_per_epoch, seed, split=split)
         self.shock_frac = shock_frac
 
         with open(os.path.join(BITMAP_DIR, 'btc_1h_bitmaps.pkl'), 'rb') as f:
@@ -136,23 +176,30 @@ class RoaringDataset(KronosWindowDataset):
             if tok in ft_bitmaps:
                 rare_union |= ft_bitmaps[tok]
 
-        # Valid anchor positions: rare token must not be too close to corpus end
+        # Valid anchor positions: restricted to this split's region so the
+        # anchored window [p, p+seq_len) stays inside [region_lo, region_hi).
         self.shock_anchors = np.array([
-            p for p in rare_union.to_array() if p <= self.max_start
+            p for p in rare_union.to_array()
+            if self.start_lo <= p < self.start_hi_excl
         ], dtype=np.int64)
 
-        # Chop positions: complement — not near a shock
-        all_positions = np.arange(self.max_start + 1, dtype=np.int64)
-        shock_set = set(self.shock_anchors.tolist())
-        self.chop_positions = all_positions[
-            [i for i in range(len(all_positions)) if i not in shock_set]
-        ]
+        # Chop positions: region complement of the shock anchors
+        region_positions = np.arange(self.start_lo, self.start_hi_excl, dtype=np.int64)
+        if len(self.shock_anchors):
+            self.chop_positions = region_positions[
+                ~np.isin(region_positions, self.shock_anchors)]
+        else:
+            self.chop_positions = region_positions
 
-        print(f"  [RoaringDataset] shock anchors: {len(self.shock_anchors)} "
+        print(f"  [RoaringDataset] split={split} region=[{self.region_lo},{self.region_hi}) "
+              f"| shock anchors: {len(self.shock_anchors)} "
               f"| chop pool: {len(self.chop_positions)} "
               f"| shock_frac={shock_frac:.0%}")
 
     def _sample_positions(self, n: int) -> np.ndarray:
+        # No rare tokens in this region → fall back to uniform sampling.
+        if len(self.shock_anchors) == 0:
+            return self.rng.integers(self.start_lo, self.start_hi_excl, size=n)
         n_shock = int(n * self.shock_frac)
         n_chop  = n - n_shock
 

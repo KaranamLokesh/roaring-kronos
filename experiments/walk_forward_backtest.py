@@ -35,21 +35,80 @@ For a faster smoke test:
       --windows 3 --start-year 2023 --epochs 3
 """
 
-import sys, os, argparse, json, subprocess, time
+import sys, os, argparse, json, subprocess, time, pickle
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'kronos_src'))
 
 import numpy as np
 import pandas as pd
+import torch
+from pyroaring import BitMap
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+from model import KronosTokenizer
+
 REPO_ROOT   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR    = os.path.join(REPO_ROOT, 'data')
+BITMAP_DIR  = os.path.join(DATA_DIR, 'bitmaps')
 RESULTS_DIR = os.path.join(REPO_ROOT, 'experiments', 'results')
 PLOT_PATH   = os.path.join(REPO_ROOT, 'experiments', 'walk_forward_backtest.png')
 EXTENDED_CSV = os.path.join(DATA_DIR, 'btc_extended_1h.csv')
 os.makedirs(RESULTS_DIR, exist_ok=True)
+os.makedirs(BITMAP_DIR, exist_ok=True)
+
+
+def regenerate_corpus_artifacts(tokenizer, device):
+    """
+    Re-tokenize data/btc_1h.csv and rebuild the token .npy arrays + Roaring
+    bitmap store so they match the CURRENT window's CSV.
+
+    Without this, training/roaring_dataloader.py would pair the window's
+    price bars with stale full-corpus token arrays (and a stale bitmap
+    store), silently corrupting every walk-forward result. Must be called
+    after each per-window CSV is written and before training on it.
+    """
+    df = pd.read_csv(os.path.join(DATA_DIR, 'btc_1h.csv'), parse_dates=['timestamp'])
+    price_cols = ['open', 'high', 'low', 'close', 'volume', 'amount']
+    x = df[price_cols].values.astype(np.float32)
+    x_norm = np.clip((x - x.mean(0)) / (x.std(0) + 1e-5), -5.0, 5.0)
+
+    with torch.no_grad():
+        x_t = torch.from_numpy(x_norm).unsqueeze(0).to(device)
+        idx = tokenizer.encode(x_t, half=True)
+        s1 = idx[0].squeeze(0).cpu().numpy()
+        s2 = idx[1].squeeze(0).cpu().numpy()
+    vocab_s2 = 2 ** tokenizer.s2_bits
+    ft = (s1 * vocab_s2 + s2)
+
+    np.save(os.path.join(DATA_DIR, 'btc_1h_s1_tokens.npy'), s1)
+    np.save(os.path.join(DATA_DIR, 'btc_1h_s2_tokens.npy'), s2)
+    np.save(os.path.join(DATA_DIR, 'btc_1h_full_tokens.npy'), ft)
+
+    # Rebuild posting-list store (ft / s1 / cooc) exactly as bitmaps/build_posting_lists.py
+    def _posting_lists(values):
+        bm = {}
+        for pos, tok in enumerate(values.tolist()):
+            bm.setdefault(int(tok), BitMap()).add(pos)
+        return bm
+
+    s1_bitmaps = _posting_lists(s1)
+    ft_bitmaps = _posting_lists(ft)
+    cooc_bitmaps = {}
+    for s1v, s2v in zip(s1.tolist(), s2.tolist()):
+        cooc_bitmaps.setdefault(int(s1v), BitMap()).add(int(s2v))
+
+    payload = {
+        's1_bitmaps':   {k: bytes(v.serialize()) for k, v in s1_bitmaps.items()},
+        'ft_bitmaps':   {k: bytes(v.serialize()) for k, v in ft_bitmaps.items()},
+        'cooc_bitmaps': {k: bytes(v.serialize()) for k, v in cooc_bitmaps.items()},
+        'meta': {'T': len(ft), 's1_bits': tokenizer.s1_bits, 's2_bits': tokenizer.s2_bits},
+    }
+    with open(os.path.join(BITMAP_DIR, 'btc_1h_bitmaps.pkl'), 'wb') as f:
+        pickle.dump(payload, f)
+    print(f"    regenerated tokens+bitmaps for {len(ft)} bars "
+          f"({len(ft_bitmaps)} full tokens, {len(s1_bitmaps)} s1 tokens)")
 
 
 # ── Data download from Binance ────────────────────────────────────────────────
@@ -178,6 +237,26 @@ def main():
         os.rename(original_csv, backup_csv)
         print("  Backed up data/btc_1h.csv → btc_1h.csv.walkforward_backup\n")
 
+    # Also back up the original token arrays + bitmap store, since each window
+    # overwrites them; restore in the finally block.
+    token_files = ['btc_1h_s1_tokens.npy', 'btc_1h_s2_tokens.npy', 'btc_1h_full_tokens.npy']
+    bitmap_pkl  = os.path.join(BITMAP_DIR, 'btc_1h_bitmaps.pkl')
+    for fn in token_files:
+        src = os.path.join(DATA_DIR, fn)
+        if os.path.exists(src) and not os.path.exists(src + '.walkforward_backup'):
+            os.rename(src, src + '.walkforward_backup')
+    if os.path.exists(bitmap_pkl) and not os.path.exists(bitmap_pkl + '.walkforward_backup'):
+        os.rename(bitmap_pkl, bitmap_pkl + '.walkforward_backup')
+
+    # Tokenizer is loaded once and reused to re-tokenize each window.
+    device = ("cuda" if torch.cuda.is_available() else
+              "mps" if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
+              else "cpu")
+    print(f"  Loading Kronos-Tokenizer-base on {device} for per-window re-tokenization\n")
+    wf_tokenizer = KronosTokenizer.from_pretrained("NeoQuasar/Kronos-Tokenizer-base").to(device).eval()
+    for p in wf_tokenizer.parameters():
+        p.requires_grad_(False)
+
     per_window = []
     try:
         for i, (ws, tr_end, te_end) in enumerate(windows):
@@ -195,12 +274,14 @@ def main():
             target_frac = n_train / n_total
             print(f"  Window has {n_total} bars; setting train/test boundary at {target_frac:.3f}")
 
-            # Hack: write a tiny config file that finetune & run_backtest read
-            # ...for now we just write the CSV and accept the 0.80 split.
-            # This means train/test boundary may not align exactly.
-            # (Best-effort proof-of-concept; for paper-quality results we
-            # would refactor finetune.py to take an explicit train/test split.)
+            # Write this window's bars as the active corpus, then re-tokenize
+            # and rebuild the bitmap store so the token arrays match the CSV.
+            # finetune.py / run_backtest.py both use the 0.80 chronological
+            # split, which by construction equals this window's train/test
+            # boundary (train_months / (train_months + test_months) = 0.80
+            # for the default 12/3 configuration).
             win_df.to_csv(original_csv, index=False)
+            regenerate_corpus_artifacts(wf_tokenizer, device)
 
             regime = classify_regime(win_df.iloc[int(len(win_df)*0.8):]['close'])
             print(f"  Test-period regime: {regime}")
@@ -251,12 +332,18 @@ def main():
                 'roaring':       per_sampler['roaring'],
             })
     finally:
-        # Restore original CSV no matter what
-        if os.path.exists(backup_csv):
-            if os.path.exists(original_csv):
-                os.remove(original_csv)
-            os.rename(backup_csv, original_csv)
-            print("\n  Restored original data/btc_1h.csv from backup")
+        # Restore original CSV + token arrays + bitmap store no matter what
+        def _restore(path):
+            bak = path + '.walkforward_backup'
+            if os.path.exists(bak):
+                if os.path.exists(path):
+                    os.remove(path)
+                os.rename(bak, path)
+        _restore(original_csv)
+        for fn in token_files:
+            _restore(os.path.join(DATA_DIR, fn))
+        _restore(bitmap_pkl)
+        print("\n  Restored original corpus (csv + tokens + bitmaps) from backup")
 
     # ── Save ─────────────────────────────────────────────────────────
     out_json = os.path.join(RESULTS_DIR, 'walk_forward.json')
